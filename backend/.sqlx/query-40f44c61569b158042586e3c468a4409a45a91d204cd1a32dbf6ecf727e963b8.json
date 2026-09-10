@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT status AS \"status?\" FROM cardio_load\n           WHERE polar_account_id = $1 ORDER BY date DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "status?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cardio_load",
+            "name": "status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "40f44c61569b158042586e3c468a4409a45a91d204cd1a32dbf6ecf727e963b8"
+}

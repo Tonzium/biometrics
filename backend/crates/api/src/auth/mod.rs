@@ -9,7 +9,7 @@ pub mod extract;
 pub mod jwt;
 pub mod password;
 
-pub use extract::CurrentUser;
+pub use extract::{CurrentUser, ReadAccess};
 
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use time::Duration;

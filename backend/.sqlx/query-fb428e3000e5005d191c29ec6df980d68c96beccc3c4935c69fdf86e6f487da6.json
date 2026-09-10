@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT date, sleep_score,\n                  (light_sleep_s + deep_sleep_s + rem_sleep_s) AS \"total_s?\"\n           FROM sleep_nights WHERE polar_account_id = $1 ORDER BY date DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "sleep_score",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "sleep_score"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "total_s?",
+        "type_info": "Int4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "fb428e3000e5005d191c29ec6df980d68c96beccc3c4935c69fdf86e6f487da6"
+}

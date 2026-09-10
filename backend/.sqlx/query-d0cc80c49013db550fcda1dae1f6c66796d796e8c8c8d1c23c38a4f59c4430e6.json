@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT date, steps FROM daily_activity\n         WHERE polar_account_id = $1 ORDER BY date DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "steps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "steps"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "d0cc80c49013db550fcda1dae1f6c66796d796e8c8c8d1c23c38a4f59c4430e6"
+}

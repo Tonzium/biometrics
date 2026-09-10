@@ -1,0 +1,273 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, start_time, start_time_local, utc_offset_min, upload_time, duration_s, sport,\n                  detailed_sport_info, device, distance_m, calories, hr_avg, hr_max, training_load,\n                  has_route, running_index, fat_percentage, carbohydrate_percentage,\n                  protein_percentage, heart_rate_zones, training_load_pro\n           FROM exercises\n           WHERE polar_account_id = $1\n             AND ($2::date IS NULL OR start_time >= $2::date)\n             AND ($3::date IS NULL OR start_time < ($3::date + 1))\n             AND ($4::text IS NULL OR sport = $4)\n           ORDER BY start_time DESC\n           LIMIT $5 OFFSET $6",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "start_time",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "start_time"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "start_time_local",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "start_time_local"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "utc_offset_min",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "utc_offset_min"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "upload_time",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "upload_time"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "duration_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "duration_s"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "sport",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "sport"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "detailed_sport_info",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "detailed_sport_info"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "device",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "device"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "distance_m",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "distance_m"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "calories",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "calories"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "hr_avg",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "hr_avg"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "hr_max",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "hr_max"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "training_load",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "training_load"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "has_route",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "has_route"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "running_index",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "running_index"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "fat_percentage",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "fat_percentage"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "carbohydrate_percentage",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "carbohydrate_percentage"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "protein_percentage",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "protein_percentage"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "heart_rate_zones",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "heart_rate_zones"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "training_load_pro",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "training_load_pro"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "8ada0882990215506a16829d70c5500f07b41e02cae46f8b034c412793bc8c6a"
+}

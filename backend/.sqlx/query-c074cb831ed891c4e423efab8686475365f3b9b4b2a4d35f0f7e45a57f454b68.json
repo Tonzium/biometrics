@@ -1,0 +1,330 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT date AS \"date!\", sleep_score, sleep_charge, sleep_total_s, light_sleep_s,\n                  deep_sleep_s, rem_sleep_s, total_interruption_s, continuity,\n                  nightly_recharge_status, ans_charge, ans_charge_status, night_hr_avg,\n                  night_hrv_avg_ms, night_breathing_rate_avg, steps, calories, active_calories,\n                  active_duration_s, daily_activity_pct, distance_from_steps_m,\n                  cardio_load_status, cardio_load, strain, tolerance, cardio_load_ratio\n           FROM v_daily_wellness\n           WHERE polar_account_id = $1 AND date BETWEEN $2 AND $3\n           ORDER BY date",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date!",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "sleep_score",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "sleep_score"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "sleep_charge",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "sleep_charge"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "sleep_total_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "sleep_total_s"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "light_sleep_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "light_sleep_s"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "deep_sleep_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "deep_sleep_s"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "rem_sleep_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "rem_sleep_s"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "total_interruption_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "total_interruption_s"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "continuity",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "continuity"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "nightly_recharge_status",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "nightly_recharge_status"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "ans_charge",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "ans_charge"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "ans_charge_status",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "ans_charge_status"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "night_hr_avg",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "night_hr_avg"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "night_hrv_avg_ms",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "night_hrv_avg_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "night_breathing_rate_avg",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "night_breathing_rate_avg"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "steps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "steps"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "calories",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "calories"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "active_calories",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "active_calories"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "active_duration_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "active_duration_s"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "daily_activity_pct",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "daily_activity_pct"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "distance_from_steps_m",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "distance_from_steps_m"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "cardio_load_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "cardio_load_status"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "cardio_load",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "cardio_load"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "strain",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "strain"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "tolerance",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "tolerance"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "cardio_load_ratio",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_daily_wellness",
+            "name": "cardio_load_ratio"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "c074cb831ed891c4e423efab8686475365f3b9b4b2a4d35f0f7e45a57f454b68"
+}

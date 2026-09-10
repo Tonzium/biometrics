@@ -1,0 +1,126 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT date, active_duration_s, inactive_duration_s, daily_activity_pct, calories,\n                  active_calories, steps, inactivity_alert_count, distance_from_steps_m\n           FROM daily_activity\n           WHERE polar_account_id = $1 AND date BETWEEN $2 AND $3\n           ORDER BY date",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "active_duration_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "active_duration_s"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "inactive_duration_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "inactive_duration_s"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "daily_activity_pct",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "daily_activity_pct"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "calories",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "calories"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "active_calories",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "active_calories"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "steps",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "steps"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "inactivity_alert_count",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "inactivity_alert_count"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "distance_from_steps_m",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "daily_activity",
+            "name": "distance_from_steps_m"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "80b99cec7baf9fa9bbffcfa3f7a8b88a1b797fcf3c6fdc27e66478c3e019e4dc"
+}

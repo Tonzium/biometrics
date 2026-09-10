@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT date, nightly_recharge_status FROM nightly_recharge\n         WHERE polar_account_id = $1 ORDER BY date DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "nightly_recharge_status",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "nightly_recharge_status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "7f3689710e5694fcbae0b92d7715faf49a1f47e23bdbbd7c4ed2bb8cf136a461"
+}

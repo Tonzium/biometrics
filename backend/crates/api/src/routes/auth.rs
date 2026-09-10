@@ -1,36 +1,36 @@
 //! POST /api/auth/login, POST /api/auth/logout, GET /api/auth/me
 
-use axum::{
-    Json, Router,
-    extract::State,
-    routing::{get, post},
-};
+use axum::{Json, extract::State};
 use axum_extra::extract::cookie::CookieJar;
 use domain::User;
 use serde::Deserialize;
+use utoipa::ToSchema;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     auth::{self, CurrentUser, jwt, password},
     db,
-    error::{ApiError, ApiResult},
+    error::{ApiError, ApiResult, ErrorBody},
     state::AppState,
 };
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/auth/login", post(login))
-        .route("/auth/logout", post(logout))
-        .route("/auth/me", get(me))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(login))
+        .routes(routes!(logout))
+        .routes(routes!(me))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
     email: String,
     password: String,
 }
 
-/// Onnistuessa asettaa istuntocookien ja palauttaa käyttäjän.
+/// Kirjautuminen. Onnistuessa asettaa `pdh_session`-cookien ja palauttaa käyttäjän.
 /// Epäonnistuessa 401 ilman erottelua "väärä sähköposti" / "väärä salasana".
+#[utoipa::path(post, path = "/auth/login", tag = "auth", request_body = LoginRequest,
+    responses((status = 200, body = User), (status = 400, body = ErrorBody), (status = 401, body = ErrorBody)))]
 async fn login(
     State(state): State<AppState>,
     jar: CookieJar,
@@ -60,6 +60,8 @@ async fn login(
     Ok((jar, Json(user)))
 }
 
+/// Poistaa istuntocookien.
+#[utoipa::path(post, path = "/auth/logout", tag = "auth", responses((status = 200)))]
 async fn logout(
     State(state): State<AppState>,
     jar: CookieJar,
@@ -70,8 +72,9 @@ async fn logout(
     (jar, Json(serde_json::json!({ "ok": true })))
 }
 
-/// Palauttaa kirjautuneen käyttäjän tuoreet tiedot kannasta.
-/// Jos käyttäjä on poistettu tokenin myöntämisen jälkeen, 401.
+/// Kirjautuneen käyttäjän tiedot. 401, jos istuntoa ei ole tai käyttäjä on poistettu.
+#[utoipa::path(get, path = "/auth/me", tag = "auth",
+    responses((status = 200, body = User), (status = 401, body = ErrorBody)))]
 async fn me(State(state): State<AppState>, current: CurrentUser) -> ApiResult<Json<User>> {
     let record = db::users::find_by_id(&state.pool, current.id)
         .await?

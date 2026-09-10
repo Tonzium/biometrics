@@ -53,3 +53,24 @@ impl FromRequestParts<AppState> for CurrentUser {
         })
     }
 }
+
+/// Lukuoikeus dataan. Jos `PUBLIC_READ=true` (oletus, näyteikkuna), kuka
+/// tahansa saa lukea; muuten vaaditaan kirjautunut käyttäjä.
+#[derive(Debug, Clone, Copy)]
+pub struct ReadAccess;
+
+impl FromRequestParts<AppState> for ReadAccess {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        if state.config.public_read {
+            return Ok(Self);
+        }
+        CurrentUser::from_request_parts(parts, state)
+            .await
+            .map(|_| Self)
+    }
+}

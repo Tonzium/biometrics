@@ -2,26 +2,32 @@
 //! GET  /api/sync/runs   omistaja: viimeisimmät ajot
 
 use axum::{
-    Json, Router,
+    Json,
     extract::{Query, State},
-    routing::{get, post},
 };
 use serde::Deserialize;
+use utoipa::IntoParams;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     auth::CurrentUser,
     db::{self, sync_runs::SyncRunRecord},
-    error::{ApiError, ApiResult},
+    error::{ApiError, ApiResult, ErrorBody},
     state::AppState,
     sync::{self, SyncError, SyncReport, Trigger},
 };
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/sync", post(run_now))
-        .route("/sync/runs", get(list_runs))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(run_now))
+        .routes(routes!(list_runs))
 }
 
+/// Omistaja: ajaa synkronoinnin heti ja palauttaa raportin.
+#[utoipa::path(post, path = "/sync", tag = "sync",
+    responses((status = 200, body = SyncReport), (status = 401, body = ErrorBody),
+              (status = 404, body = ErrorBody), (status = 409, body = ErrorBody),
+              (status = 503, body = ErrorBody)))]
 async fn run_now(
     State(state): State<AppState>,
     current: CurrentUser,
@@ -42,11 +48,16 @@ async fn run_now(
     Ok(Json(report))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct RunsQuery {
+    /// Montako viimeisintä ajoa (1-200, oletus 20).
     limit: Option<i64>,
 }
 
+/// Omistaja: viimeisimmät synkronointiajot.
+#[utoipa::path(get, path = "/sync/runs", tag = "sync", params(RunsQuery),
+    responses((status = 200, body = Vec<SyncRunRecord>), (status = 401, body = ErrorBody)))]
 async fn list_runs(
     State(state): State<AppState>,
     current: CurrentUser,

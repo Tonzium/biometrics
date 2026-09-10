@@ -6,11 +6,10 @@
 //! DELETE /api/polar/disconnect  poistaa rekisteröinnin Polarista ja tokenin kannasta
 
 use axum::{
-    Json, Router,
+    Json,
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect, Response},
-    routing::{delete, get},
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
@@ -19,11 +18,13 @@ use polar_client::{PolarClient, PolarError, users::RegisterOutcome};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use time::Duration;
+use utoipa::{IntoParams, ToSchema};
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     auth::CurrentUser,
     db,
-    error::{ApiError, ApiResult},
+    error::{ApiError, ApiResult, ErrorBody},
     state::AppState,
 };
 
@@ -33,15 +34,15 @@ const STATE_TTL_MINUTES: i64 = 10;
 /// Minne selain ohjataan kierroksen jälkeen.
 const SETTINGS_PATH: &str = "/settings";
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/polar/status", get(status))
-        .route("/polar/connect", get(connect))
-        .route("/polar/callback", get(callback))
-        .route("/polar/disconnect", delete(disconnect))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(status))
+        .routes(routes!(connect))
+        .routes(routes!(callback))
+        .routes(routes!(disconnect))
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct PolarStatus {
     /// Onko Polar-tunnukset asetettu palvelimelle.
     configured: bool,
@@ -51,6 +52,9 @@ pub struct PolarStatus {
     last_sync_at: Option<DateTime<Utc>>,
 }
 
+/// Omistaja: Polar-tilin tila.
+#[utoipa::path(get, path = "/polar/status", tag = "polar",
+    responses((status = 200, body = PolarStatus), (status = 401, body = ErrorBody)))]
 async fn status(
     State(state): State<AppState>,
     current: CurrentUser,
@@ -81,6 +85,10 @@ fn state_cookie(state: &AppState, value: String, ttl: Duration) -> Cookie<'stati
         .build()
 }
 
+/// Omistaja: aloittaa OAuth2-kierroksen. Ohjaa selaimen Polar Flow:n valtuutussivulle.
+#[utoipa::path(get, path = "/polar/connect", tag = "polar",
+    responses((status = 303, description = "Redirect Polariin"), (status = 401, body = ErrorBody),
+              (status = 403, body = ErrorBody), (status = 503, body = ErrorBody)))]
 async fn connect(
     State(state): State<AppState>,
     current: CurrentUser,
@@ -102,7 +110,8 @@ async fn connect(
     Ok((jar, Redirect::to(&url)))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct CallbackQuery {
     code: Option<String>,
     state: Option<String>,
@@ -110,6 +119,11 @@ pub struct CallbackQuery {
     error: Option<String>,
 }
 
+/// Polarin paluuohjaus. Tarkistaa `state`-cookien, vaihtaa koodin tokeniin ja tallentaa tilin.
+/// Ohjaa lopuksi osoitteeseen `/settings?polar=connected|denied|error`.
+#[utoipa::path(get, path = "/polar/callback", tag = "polar", params(CallbackQuery),
+    responses((status = 303, description = "Redirect asetussivulle"), (status = 400, body = ErrorBody),
+              (status = 401, body = ErrorBody)))]
 async fn callback(
     State(state): State<AppState>,
     current: CurrentUser,
@@ -188,6 +202,9 @@ async fn callback(
         .into_response())
 }
 
+/// Omistaja: poistaa rekisteröinnin Polarista ja tokenin kannasta.
+#[utoipa::path(delete, path = "/polar/disconnect", tag = "polar",
+    responses((status = 204), (status = 401, body = ErrorBody), (status = 404, body = ErrorBody)))]
 async fn disconnect(State(state): State<AppState>, current: CurrentUser) -> ApiResult<StatusCode> {
     current.require_owner()?;
     let Some(account) = db::polar_accounts::find_by_user(&state.pool, current.id).await? else {

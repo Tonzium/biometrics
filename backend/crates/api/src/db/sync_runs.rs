@@ -2,9 +2,10 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::Value;
 use sqlx::PgPool;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct SyncRunRecord {
     pub id: i64,
     #[serde(skip)]
@@ -13,6 +14,8 @@ pub struct SyncRunRecord {
     pub status: String,
     pub started_at: DateTime<Utc>,
     pub finished_at: Option<DateTime<Utc>>,
+    /// Upsertattujen rivien määrät datatyypeittäin.
+    #[schema(value_type = Object)]
     pub counts: Value,
     pub error: Option<String>,
 }

@@ -92,3 +92,16 @@ pub async fn set_last_sync_at(pool: &PgPool, account_id: Uuid) -> sqlx::Result<(
     .await?;
     Ok(())
 }
+
+/// Ensimmäiseksi rekisteröity tili. Julkiset lukureitit näyttävät tämän tilin
+/// datan (sovelluksessa on yksi omistaja).
+pub async fn first(pool: &PgPool) -> sqlx::Result<Option<PolarAccountRecord>> {
+    sqlx::query_as!(
+        PolarAccountRecord,
+        "SELECT id, app_user_id, polar_user_id, access_token_enc, member_id,
+                registered_at, last_sync_at
+         FROM polar_accounts ORDER BY registered_at LIMIT 1"
+    )
+    .fetch_optional(pool)
+    .await
+}

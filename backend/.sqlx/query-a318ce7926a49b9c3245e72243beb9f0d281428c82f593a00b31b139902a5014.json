@@ -1,0 +1,138 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT date, heart_rate_avg, beat_to_beat_avg_ms, hrv_avg_ms, breathing_rate_avg,\n                  nightly_recharge_status, ans_charge, ans_charge_status, hrv_samples,\n                  breathing_samples\n           FROM nightly_recharge\n           WHERE polar_account_id = $1 AND date BETWEEN $2 AND $3\n           ORDER BY date",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "heart_rate_avg",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "heart_rate_avg"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "beat_to_beat_avg_ms",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "beat_to_beat_avg_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "hrv_avg_ms",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "hrv_avg_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "breathing_rate_avg",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "breathing_rate_avg"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "nightly_recharge_status",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "nightly_recharge_status"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "ans_charge",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "ans_charge"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "ans_charge_status",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "ans_charge_status"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "hrv_samples",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "hrv_samples"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "breathing_samples",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "nightly_recharge",
+            "name": "breathing_samples"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "a318ce7926a49b9c3245e72243beb9f0d281428c82f593a00b31b139902a5014"
+}

@@ -1,0 +1,282 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT date, sleep_start_time, sleep_end_time, continuity, continuity_class,\n                  light_sleep_s, deep_sleep_s, rem_sleep_s, unrecognized_sleep_s, sleep_score,\n                  sleep_charge, sleep_goal_s, sleep_rating, total_interruption_s,\n                  short_interruption_s, long_interruption_s, sleep_cycles, group_duration_score,\n                  group_solidity_score, group_regeneration_score, hypnogram, heart_rate_samples\n           FROM sleep_nights\n           WHERE polar_account_id = $1 AND date BETWEEN $2 AND $3\n           ORDER BY date",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "sleep_start_time",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "sleep_start_time"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "sleep_end_time",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "sleep_end_time"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "continuity",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "continuity"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "continuity_class",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "continuity_class"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "light_sleep_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "light_sleep_s"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "deep_sleep_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "deep_sleep_s"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "rem_sleep_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "rem_sleep_s"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "unrecognized_sleep_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "unrecognized_sleep_s"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "sleep_score",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "sleep_score"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "sleep_charge",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "sleep_charge"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "sleep_goal_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "sleep_goal_s"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "sleep_rating",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "sleep_rating"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "total_interruption_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "total_interruption_s"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "short_interruption_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "short_interruption_s"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "long_interruption_s",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "long_interruption_s"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "sleep_cycles",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "sleep_cycles"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "group_duration_score",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "group_duration_score"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "group_solidity_score",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "group_solidity_score"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "group_regeneration_score",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "group_regeneration_score"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "hypnogram",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "hypnogram"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "heart_rate_samples",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "sleep_nights",
+            "name": "heart_rate_samples"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "97479de567bef1705f7cc66029160cfa0bcd803eec16260fb1901ead3462339d"
+}

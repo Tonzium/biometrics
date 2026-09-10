@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT weight_kg, vo2_max, resting_heart_rate FROM physical_info\n         WHERE polar_account_id = $1 ORDER BY date DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "weight_kg",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "physical_info",
+            "name": "weight_kg"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "vo2_max",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "physical_info",
+            "name": "vo2_max"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "resting_heart_rate",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "physical_info",
+            "name": "resting_heart_rate"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "76711b2664f1d2853fb945cbe1bf2a1e05460cce01cdce4bfb1a90007dc463be"
+}

@@ -18,6 +18,7 @@ use polar_client::{
 };
 use serde::Serialize;
 use sqlx::PgPool;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{
@@ -42,7 +43,7 @@ impl Trigger {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, ToSchema)]
 pub struct SyncCounts {
     pub exercises: u32,
     pub sleep_nights: u32,
@@ -65,7 +66,7 @@ impl SyncCounts {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct SyncReport {
     pub run_id: i64,
     pub trigger: &'static str,

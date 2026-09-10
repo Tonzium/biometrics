@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"count!\" FROM exercises\n           WHERE polar_account_id = $1\n             AND ($2::date IS NULL OR start_time >= $2::date)\n             AND ($3::date IS NULL OR start_time < ($3::date + 1))\n             AND ($4::text IS NULL OR sport = $4)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d7acfea93fc8fda29192678d0e010646b589c6791ce980df9b9581cb6a6efe02"
+}

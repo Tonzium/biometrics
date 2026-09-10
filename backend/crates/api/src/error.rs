@@ -12,6 +12,7 @@ use axum::{
 };
 use domain::DomainError;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 #[derive(Debug)]
 pub enum ApiError {
@@ -29,15 +30,17 @@ pub enum ApiError {
     Internal(anyhow::Error),
 }
 
-#[derive(Serialize)]
-struct ErrorBody<'a> {
-    error: ErrorDetail<'a>,
+/// Kaikkien virhevastausten muoto.
+#[derive(Serialize, ToSchema)]
+pub struct ErrorBody<'a> {
+    pub error: ErrorDetail<'a>,
 }
 
-#[derive(Serialize)]
-struct ErrorDetail<'a> {
-    code: &'a str,
-    message: String,
+#[derive(Serialize, ToSchema)]
+pub struct ErrorDetail<'a> {
+    /// Koneluettava koodi, esim. `unauthorized`, `not_found`.
+    pub code: &'a str,
+    pub message: String,
 }
 
 impl ApiError {

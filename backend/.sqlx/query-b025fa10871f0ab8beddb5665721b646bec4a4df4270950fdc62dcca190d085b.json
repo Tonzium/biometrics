@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT sport FROM exercises WHERE polar_account_id = $1 ORDER BY sport",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "sport",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "exercises",
+            "name": "sport"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b025fa10871f0ab8beddb5665721b646bec4a4df4270950fdc62dcca190d085b"
+}

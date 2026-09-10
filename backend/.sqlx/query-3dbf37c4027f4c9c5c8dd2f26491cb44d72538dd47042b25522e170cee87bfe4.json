@@ -1,0 +1,102 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT date, status, cardio_load, strain, tolerance, cardio_load_ratio, cardio_load_level\n           FROM cardio_load\n           WHERE polar_account_id = $1 AND date BETWEEN $2 AND $3\n           ORDER BY date",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "cardio_load",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cardio_load",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "cardio_load",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "cardio_load",
+            "name": "cardio_load"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "strain",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "cardio_load",
+            "name": "strain"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "tolerance",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "cardio_load",
+            "name": "tolerance"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "cardio_load_ratio",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "cardio_load",
+            "name": "cardio_load_ratio"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "cardio_load_level",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "cardio_load",
+            "name": "cardio_load_level"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "3dbf37c4027f4c9c5c8dd2f26491cb44d72538dd47042b25522e170cee87bfe4"
+}

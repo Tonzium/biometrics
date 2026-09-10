@@ -20,6 +20,10 @@ pub struct Config {
     /// AES-256-avain Polar-tokenin salaamiseen levossa.
     pub encryption_key: [u8; 32],
 
+    /// Saako dataa lukea ilman kirjautumista (näyteikkuna). `false` = kaikki
+    /// reitit vaativat istunnon.
+    pub public_read: bool,
+
     /// Ajastetun synkronoinnin väli tunteina; 0 = vain manuaalinen.
     pub sync_interval_hours: u64,
 
@@ -68,6 +72,7 @@ impl Config {
             }
         };
 
+        let public_read = optional_parsed("PUBLIC_READ", true)?;
         let sync_interval_hours = optional_parsed("SYNC_INTERVAL_HOURS", 6)?;
 
         let admin_email = optional("ADMIN_EMAIL").map(|e| e.to_lowercase());
@@ -80,6 +85,7 @@ impl Config {
             session_hours,
             cookie_secure,
             encryption_key,
+            public_read,
             sync_interval_hours,
             polar,
             admin_email,
@@ -96,6 +102,7 @@ impl Config {
             session_hours: 1,
             cookie_secure: false,
             encryption_key: [7u8; 32],
+            public_read: true,
             sync_interval_hours: 0,
             polar: None,
             admin_email: None,

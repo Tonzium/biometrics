@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, app_user_id, polar_user_id, access_token_enc, member_id,\n                registered_at, last_sync_at\n         FROM polar_accounts ORDER BY registered_at LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "app_user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "app_user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "polar_user_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "polar_user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "access_token_enc",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "access_token_enc"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "member_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "registered_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "registered_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "last_sync_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "last_sync_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "23cd6597674121ad1cd837ed1b099eafd0b19ab74e78f30ab3125b4eba7d8fec"
+}

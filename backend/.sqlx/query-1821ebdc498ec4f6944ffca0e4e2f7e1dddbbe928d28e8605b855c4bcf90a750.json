@@ -1,0 +1,185 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT week_start AS \"week_start!\", exercise_count AS \"exercise_count!\",\n                  total_duration_s AS \"total_duration_s!\", total_distance_m, total_calories,\n                  total_training_load, avg_hr, max_hr, avg_sleep_score, avg_sleep_total_s,\n                  avg_recharge_status, avg_night_hrv_ms, total_steps,\n                  nights_with_sleep AS \"nights_with_sleep!\"\n           FROM v_weekly_summary\n           WHERE polar_account_id = $1 AND week_start >= $2\n           ORDER BY week_start",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "week_start!",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "week_start"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "exercise_count!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "exercise_count"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "total_duration_s!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "total_duration_s"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "total_distance_m",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "total_distance_m"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "total_calories",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "total_calories"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "total_training_load",
+        "type_info": "Float4",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "total_training_load"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "avg_hr",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "avg_hr"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "max_hr",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "max_hr"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "avg_sleep_score",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "avg_sleep_score"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "avg_sleep_total_s",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "avg_sleep_total_s"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "avg_recharge_status",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "avg_recharge_status"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "avg_night_hrv_ms",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "avg_night_hrv_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "total_steps",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "total_steps"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "nights_with_sleep!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "v_weekly_summary",
+            "name": "nights_with_sleep"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "1821ebdc498ec4f6944ffca0e4e2f7e1dddbbe928d28e8605b855c4bcf90a750"
+}

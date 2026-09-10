@@ -49,6 +49,12 @@ Tarkistus: http://localhost:8787/api/health palauttaa `{"status":"ok","database"
 
 Ilman tunnuksia palvelin käynnistyy normaalisti, mutta yhdistäminen palauttaa 503.
 
+## Rajapinta
+
+Backend julkaisee OpenAPI 3 -kuvauksen osoitteessa `/api/openapi.json` ja Swagger UI:n osoitteessa
+`/api/docs`. Lukureitit ovat oletuksena julkisia (`PUBLIC_READ=true`); Polar-yhdistäminen ja
+synkronointi vaativat omistajan kirjautumisen. `PUBLIC_READ=false` sulkee kaiken kirjautumisen taakse.
+
 ## Komennot
 
 | Mitä | Missä | Komento |
