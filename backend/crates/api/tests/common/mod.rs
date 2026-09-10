@@ -16,7 +16,11 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 
 pub fn test_app(pool: PgPool) -> Router {
-    api::app(AppState::new(Config::for_tests(), pool))
+    test_app_with(Config::for_tests(), pool)
+}
+
+pub fn test_app_with(config: Config, pool: PgPool) -> Router {
+    api::app(AppState::new(config, pool).expect("test state"))
 }
 
 /// Lähettää pyynnön reitittimelle ilman verkkoa ja palauttaa vastauksen.
@@ -29,6 +33,17 @@ pub async fn send(app: &Router, request: Request<Body>) -> Response<Body> {
 
 pub async fn get(app: &Router, uri: &str) -> Response<Body> {
     send(app, Request::get(uri).body(Body::empty()).unwrap()).await
+}
+
+pub async fn get_with_cookie(app: &Router, uri: &str, cookie: &str) -> Response<Body> {
+    send(
+        app,
+        Request::get(uri)
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await
 }
 
 pub async fn post_json(app: &Router, uri: &str, json: &str) -> Response<Body> {

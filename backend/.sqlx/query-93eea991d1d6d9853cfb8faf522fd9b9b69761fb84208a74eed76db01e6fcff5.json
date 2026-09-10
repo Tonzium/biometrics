@@ -1,0 +1,103 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO polar_accounts (app_user_id, polar_user_id, access_token_enc, member_id)\n        VALUES ($1, $2, $3, $4)\n        ON CONFLICT (app_user_id) DO UPDATE\n            SET polar_user_id    = EXCLUDED.polar_user_id,\n                access_token_enc = EXCLUDED.access_token_enc,\n                member_id        = EXCLUDED.member_id,\n                registered_at    = now(),\n                last_sync_at     = NULL\n        RETURNING id, app_user_id, polar_user_id, access_token_enc, member_id,\n                  registered_at, last_sync_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "app_user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "app_user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "polar_user_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "polar_user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "access_token_enc",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "access_token_enc"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "member_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "registered_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "registered_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "last_sync_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "polar_accounts",
+            "name": "last_sync_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Bytea",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "93eea991d1d6d9853cfb8faf522fd9b9b69761fb84208a74eed76db01e6fcff5"
+}

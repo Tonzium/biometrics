@@ -24,6 +24,8 @@ pub enum ApiError {
     TooManyRequests {
         retry_after_secs: Option<u64>,
     },
+    /// Toiminto vaatii asetuksen, jota ei ole (esim. Polar-tunnukset).
+    ServiceUnavailable(String),
     Internal(anyhow::Error),
 }
 
@@ -55,6 +57,9 @@ impl ApiError {
                 "too_many_requests",
                 "upstream rate limit reached, try again later".into(),
             ),
+            Self::ServiceUnavailable(m) => {
+                (StatusCode::SERVICE_UNAVAILABLE, "unavailable", m.clone())
+            }
             Self::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal",

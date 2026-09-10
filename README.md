@@ -38,6 +38,17 @@ cd frontend && npm install && npm run dev
 
 Tarkistus: http://localhost:8787/api/health palauttaa `{"status":"ok","database":"up",...}`.
 
+## Polar-tunnukset
+
+1. Luo asiakas osoitteessa https://admin.polaraccesslink.com. Redirect URL kehityksessä on
+   `http://localhost:5173/api/polar/callback` (Vite-proxyn kautta, jotta istuntocookie kulkee mukana),
+   tuotannossa `https://polar.tonikiuru.com/api/polar/callback`. Kumpaakin varten tarvitaan oma asiakas.
+2. Kirjoita `POLAR_CLIENT_ID`, `POLAR_CLIENT_SECRET` ja `POLAR_REDIRECT_URL` tiedostoon `deploy/.env`.
+3. Kirjaudu sovellukseen omistajana ja avaa `/api/polar/connect` (asetussivu tekee tämän). Token
+   tallennetaan kantaan AES-256-GCM-salattuna (`APP_ENCRYPTION_KEY`).
+
+Ilman tunnuksia palvelin käynnistyy normaalisti, mutta yhdistäminen palauttaa 503.
+
 ## Komennot
 
 | Mitä | Missä | Komento |

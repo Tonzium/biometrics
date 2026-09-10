@@ -1,6 +1,7 @@
 use std::env;
 
 use anyhow::{Context, bail};
+use polar_client::PolarConfig;
 
 /// Kaikki ympäristöstä luettavat asetukset. Puuttuva pakollinen arvo
 /// kaataa käynnistyksen heti selkeällä virheellä.
@@ -15,6 +16,13 @@ pub struct Config {
     pub session_hours: i64,
     /// Cookie `Secure`-lippu. Kehityksessä http://localhost vaatii `false`.
     pub cookie_secure: bool,
+
+    /// AES-256-avain Polar-tokenin salaamiseen levossa.
+    pub encryption_key: [u8; 32],
+
+    /// Polar AccessLink -asiakkaan tunnukset. `None`, jos niitä ei ole
+    /// asetettu: palvelin käynnistyy, mutta Polar-yhdistäminen palauttaa 503.
+    pub polar: Option<PolarConfig>,
 
     /// Ensimmäisellä käynnistyksellä luotava omistajakäyttäjä.
     /// Jos kannassa on jo käyttäjiä, näitä ei käytetä.
@@ -37,11 +45,28 @@ impl Config {
         }
         let cookie_secure = optional_parsed("COOKIE_SECURE", true)?;
 
-        let admin_email = env::var("ADMIN_EMAIL")
-            .ok()
-            .map(|e| e.trim().to_lowercase())
-            .filter(|e| !e.is_empty());
-        let admin_password = env::var("ADMIN_PASSWORD").ok().filter(|p| !p.is_empty());
+        let encryption_key =
+            crate::crypto::TokenCipher::parse_key(&required("APP_ENCRYPTION_KEY")?)?;
+
+        let polar = match (
+            optional("POLAR_CLIENT_ID"),
+            optional("POLAR_CLIENT_SECRET"),
+            optional("POLAR_REDIRECT_URL"),
+        ) {
+            (Some(id), Some(secret), Some(redirect)) => {
+                Some(PolarConfig::new(id, secret, redirect))
+            }
+            (None, None, _) => {
+                tracing::warn!("POLAR_CLIENT_ID/SECRET not set; Polar linking is disabled");
+                None
+            }
+            _ => {
+                bail!("POLAR_CLIENT_ID, POLAR_CLIENT_SECRET and POLAR_REDIRECT_URL must all be set")
+            }
+        };
+
+        let admin_email = optional("ADMIN_EMAIL").map(|e| e.to_lowercase());
+        let admin_password = optional("ADMIN_PASSWORD");
 
         Ok(Self {
             database_url,
@@ -49,6 +74,8 @@ impl Config {
             jwt_secret,
             session_hours,
             cookie_secure,
+            encryption_key,
+            polar,
             admin_email,
             admin_password,
         })
@@ -62,6 +89,8 @@ impl Config {
             jwt_secret: "test-secret-test-secret-test-secret-1234".into(),
             session_hours: 1,
             cookie_secure: false,
+            encryption_key: [7u8; 32],
+            polar: None,
             admin_email: None,
             admin_password: None,
         }
@@ -76,15 +105,21 @@ fn required(key: &str) -> anyhow::Result<String> {
     Ok(value)
 }
 
+fn optional(key: &str) -> Option<String> {
+    env::var(key)
+        .ok()
+        .map(|v| v.trim().to_owned())
+        .filter(|v| !v.is_empty())
+}
+
 fn optional_parsed<T: std::str::FromStr>(key: &str, default: T) -> anyhow::Result<T>
 where
     T::Err: std::fmt::Display,
 {
-    match env::var(key) {
-        Ok(raw) if !raw.trim().is_empty() => raw
-            .trim()
+    match optional(key) {
+        Some(raw) => raw
             .parse()
             .map_err(|e| anyhow::anyhow!("{key}={raw:?} is invalid: {e}")),
-        _ => Ok(default),
+        None => Ok(default),
     }
 }

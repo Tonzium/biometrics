@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("seeding owner account")?;
 
-    let app = api::app(AppState::new(config.clone(), pool));
+    let app = api::app(AppState::new(config.clone(), pool).context("building app state")?);
 
     let listener = TcpListener::bind(&config.bind_addr)
         .await
