@@ -39,10 +39,10 @@ Tarkistus: http://localhost:8787/api/health palauttaa `{"status":"ok","database"
 
 | Mitä | Missä | Komento |
 |---|---|---|
-| Backend-testit | backend/ | `cargo test` |
+| Backend-testit (vaatii dev-kannan) | backend/ | `DATABASE_URL=postgres://polar:polar@127.0.0.1:5432/polar cargo test` |
 | Lint | backend/ | `cargo clippy --all-targets -- -D warnings` |
 | Formatointi | backend/ | `cargo fmt` |
-| Uusi migraatio | backend/ | `sqlx migrate add <nimi>` |
+| Uusi migraatio | backend/ | `sqlx migrate add <nimi>` (ajetaan automaattisesti käynnistyksessä ja testeissä) |
 | Offline-kyselydata Docker-buildia varten | backend/ | `cargo sqlx prepare --workspace` |
 | Frontend-testit | frontend/ | `npm test` |
 | Tyyppitarkistus + build | frontend/ | `npm run build` |

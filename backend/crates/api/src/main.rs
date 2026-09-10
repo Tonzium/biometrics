@@ -1,19 +1,13 @@
-//! Polar Data Hub -backend.
+//! Polar Data Hub -backend, käynnistin.
 //!
-//! Käynnistys: lue asetukset ympäristöstä, avaa kantayhteys, aja migraatiot,
+//! Lue asetukset ympäristöstä, avaa kantayhteys, aja migraatiot,
 //! rakenna reititin ja kuuntele `BIND_ADDR`-osoitteessa.
 
-mod config;
-mod routes;
-mod state;
-
 use anyhow::Context;
+use api::{AppState, Config, MIGRATOR};
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 use tracing_subscriber::{EnvFilter, fmt};
-
-use crate::config::Config;
-use crate::state::AppState;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -32,14 +26,10 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("connecting to PostgreSQL")?;
 
-    sqlx::migrate!("../../migrations")
-        .run(&pool)
-        .await
-        .context("running migrations")?;
+    MIGRATOR.run(&pool).await.context("running migrations")?;
     tracing::info!("migrations applied");
 
-    let state = AppState::new(config.clone(), pool);
-    let app = routes::router(state);
+    let app = api::app(AppState::new(config.clone(), pool));
 
     let listener = TcpListener::bind(&config.bind_addr)
         .await
