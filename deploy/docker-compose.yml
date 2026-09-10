@@ -1,0 +1,59 @@
+# Tuotantopino: db + api + web(nginx) + cloudflared.
+# Yksikään palvelu ei julkaise portteja isäntäkoneelle; liikenne tulee vain tunnelin kautta.
+#
+#   cp .env.example .env   # täytä arvot
+#   docker compose up -d --build
+
+name: polar-data-hub
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-polar}
+      POSTGRES_USER: ${POSTGRES_USER:-polar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Aseta POSTGRES_PASSWORD .env-tiedostoon}
+    volumes:
+      # Postgres 18 -image käyttää koko /var/lib/postgresql-hakemistoa datalle
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-polar} -d ${POSTGRES_DB:-polar}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build:
+      context: ../backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-polar}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-polar}
+      BIND_ADDR: 0.0.0.0:8080
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8080"
+
+  web:
+    build:
+      context: ../frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    expose:
+      - "80"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Aseta CLOUDFLARE_TUNNEL_TOKEN .env-tiedostoon}
+    depends_on:
+      - web
+
+volumes:
+  pgdata:

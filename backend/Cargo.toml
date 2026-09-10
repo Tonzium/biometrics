@@ -1,0 +1,63 @@
+[workspace]
+resolver = "3"
+members = ["crates/api", "crates/polar-client", "crates/domain"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+authors = ["Toni Kiuru"]
+license = "MIT"
+
+[workspace.dependencies]
+# Runtime & web
+tokio = { version = "1.53", features = ["full"] }
+axum = { version = "0.8", features = ["macros"] }
+axum-extra = { version = "0.12", features = ["cookie"] }
+tower = "0.5"
+tower-http = { version = "0.7", features = ["cors", "trace", "compression-gzip", "timeout"] }
+
+# Database
+sqlx = { version = "0.9", default-features = false, features = [
+    "runtime-tokio", "tls-rustls-ring", "postgres", "macros", "migrate",
+    "uuid", "chrono", "json",
+] }
+
+# HTTP client (Polar AccessLink)
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "http2", "charset"] }
+
+# Serialization & data types
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+
+# Errors & config
+thiserror = "2"
+anyhow = "1"
+dotenvy = "0.15"
+
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Auth & crypto
+jsonwebtoken = "11"
+argon2 = { version = "0.6", features = ["std"] }
+aes-gcm = "0.11"
+base64 = "0.22"
+rand = "0.9"
+
+# OpenAPI
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-axum = "0.2"
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
+
+# Internal crates
+domain = { path = "crates/domain" }
+polar-client = { path = "crates/polar-client" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
