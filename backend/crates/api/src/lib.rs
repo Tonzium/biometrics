@@ -4,10 +4,12 @@
 //! integraatiotestit (`tests/`) voivat rakentaa saman reitittimen
 //! testikantaa vasten ilman verkkoporttia.
 
+pub mod auth;
 pub mod config;
-#[allow(dead_code)] // otetaan käyttöön auth-reiteissä (vaihe 2)
+pub mod db;
 pub mod error;
 pub mod routes;
+pub mod seed;
 pub mod state;
 
 pub use config::Config;

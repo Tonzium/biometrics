@@ -24,7 +24,8 @@ Vaatimukset: Rust (rustup), Node 24+, Docker Desktop.
 docker compose -f deploy/docker-compose.dev.yml up -d
 
 # 2. Ympäristömuuttujat
-cp deploy/.env.example deploy/.env    # täytä arvot; dev-kannan salasana on "polar"
+cp deploy/.env.example deploy/.env    # täytä arvot; dev-kannan salasana on "polar", COOKIE_SECURE=false
+# Ensimmäisellä käynnistyksellä backend luo omistajakäyttäjän ADMIN_EMAIL/ADMIN_PASSWORD-muuttujista.
 
 # 3. Backend (ajaa migraatiot käynnistyessä, kuuntelee 127.0.0.1:8787)
 cd backend && cargo run
@@ -32,6 +33,8 @@ cd backend && cargo run
 # 4. Frontend (Vite dev server, proxyttaa /api backendille)
 cd frontend && npm install && npm run dev
 ```
+
+`sqlx::query!`-makrot tarkistavat SQL:n käännösaikana; siksi `backend/.env` sisältää `DATABASE_URL`-rivin dev-kantaan (git-ignoroitu).
 
 Tarkistus: http://localhost:8787/api/health palauttaa `{"status":"ok","database":"up",...}`.
 
@@ -43,7 +46,7 @@ Tarkistus: http://localhost:8787/api/health palauttaa `{"status":"ok","database"
 | Lint | backend/ | `cargo clippy --all-targets -- -D warnings` |
 | Formatointi | backend/ | `cargo fmt` |
 | Uusi migraatio | backend/ | `sqlx migrate add <nimi>` (ajetaan automaattisesti käynnistyksessä ja testeissä) |
-| Offline-kyselydata Docker-buildia varten | backend/ | `cargo sqlx prepare --workspace` |
+| Offline-kyselydata Docker-buildia varten (aja aina kun SQL-kyselyt muuttuvat, commitoi `.sqlx/`) | backend/ | `cargo sqlx prepare --workspace` |
 | Frontend-testit | frontend/ | `npm test` |
 | Tyyppitarkistus + build | frontend/ | `npm run build` |
 | API-tyyppien generointi | frontend/ | `npm run gen:api` |

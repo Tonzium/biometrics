@@ -16,11 +16,7 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 
 pub fn test_app(pool: PgPool) -> Router {
-    let config = Config {
-        database_url: String::new(), // ei käytetä: pool annetaan suoraan
-        bind_addr: "127.0.0.1:0".into(),
-    };
-    api::app(AppState::new(config, pool))
+    api::app(AppState::new(Config::for_tests(), pool))
 }
 
 /// Lähettää pyynnön reitittimelle ilman verkkoa ja palauttaa vastauksen.
@@ -41,6 +37,20 @@ pub async fn post_json(app: &Router, uri: &str, json: &str) -> Response<Body> {
         .body(Body::from(json.to_owned()))
         .unwrap();
     send(app, request).await
+}
+
+/// Poimii `Set-Cookie`-otsakkeesta `name=value`-osan Cookie-otsaketta varten.
+pub fn session_cookie(response: &Response<Body>) -> String {
+    response
+        .headers()
+        .get(header::SET_COOKIE)
+        .expect("response should set a cookie")
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_owned()
 }
 
 pub async fn body_bytes(response: Response<Body>) -> Bytes {

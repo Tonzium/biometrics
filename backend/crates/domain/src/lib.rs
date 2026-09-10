@@ -4,5 +4,7 @@
 //! vain rakenteet, joita `api` ja `polar-client` jakavat.
 
 pub mod error;
+pub mod user;
 
 pub use error::DomainError;
+pub use user::{Role, User};

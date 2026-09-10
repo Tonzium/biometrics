@@ -1,3 +1,4 @@
+mod auth;
 mod health;
 
 use axum::Router;
@@ -8,7 +9,7 @@ use crate::state::AppState;
 /// Koko sovelluksen reititin. Kaikki reitit ovat `/api`-etuliitteen alla,
 /// jotta nginx voi ohjata ne yksiselitteisesti backendille.
 pub fn router(state: AppState) -> Router {
-    let api = Router::new().merge(health::router());
+    let api = Router::new().merge(health::router()).merge(auth::router());
 
     Router::new()
         .nest("/api", api)

@@ -29,6 +29,10 @@ async fn main() -> anyhow::Result<()> {
     MIGRATOR.run(&pool).await.context("running migrations")?;
     tracing::info!("migrations applied");
 
+    api::seed::ensure_owner(&pool, &config)
+        .await
+        .context("seeding owner account")?;
+
     let app = api::app(AppState::new(config.clone(), pool));
 
     let listener = TcpListener::bind(&config.bind_addr)
