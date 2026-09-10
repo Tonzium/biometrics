@@ -6,13 +6,17 @@
 //! Rakenne:
 //! - [`oauth`]  valtuutus-URL ja koodin vaihto access tokeniin
 //! - [`users`]  käyttäjän rekisteröinti/poisto AccessLinkissä
-//! - (vaihe 4) datareitit: exercises, sleep, nightly-recharge, activities, ...
+//! - [`data`]   datareitit: exercises, sleep, nightly-recharge, activities, physical-info, cardio-load
+//! - [`models`] vastausrakenteet, [`duration`] ISO 8601 -kestot
 //!
 //! Kaikki URL:t ovat [`PolarConfig`]:ssa, jotta testit voivat osoittaa
 //! ne mock-palvelimeen.
 
+pub mod data;
+pub mod duration;
 mod error;
 mod http;
+pub mod models;
 pub mod oauth;
 pub mod users;
 

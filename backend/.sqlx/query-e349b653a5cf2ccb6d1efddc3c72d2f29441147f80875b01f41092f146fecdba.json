@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO sleep_nights (\n            polar_account_id, date, sleep_start_time, sleep_end_time, device_id, continuity,\n            continuity_class, light_sleep_s, deep_sleep_s, rem_sleep_s, unrecognized_sleep_s,\n            sleep_score, sleep_charge, sleep_goal_s, sleep_rating, total_interruption_s,\n            short_interruption_s, long_interruption_s, sleep_cycles, group_duration_score,\n            group_solidity_score, group_regeneration_score, hypnogram, heart_rate_samples, raw\n        ) VALUES (\n            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,\n            $20, $21, $22, $23, $24, $25\n        )\n        ON CONFLICT (polar_account_id, date) DO UPDATE SET\n            sleep_start_time = EXCLUDED.sleep_start_time, sleep_end_time = EXCLUDED.sleep_end_time,\n            device_id = EXCLUDED.device_id, continuity = EXCLUDED.continuity,\n            continuity_class = EXCLUDED.continuity_class, light_sleep_s = EXCLUDED.light_sleep_s,\n            deep_sleep_s = EXCLUDED.deep_sleep_s, rem_sleep_s = EXCLUDED.rem_sleep_s,\n            unrecognized_sleep_s = EXCLUDED.unrecognized_sleep_s, sleep_score = EXCLUDED.sleep_score,\n            sleep_charge = EXCLUDED.sleep_charge, sleep_goal_s = EXCLUDED.sleep_goal_s,\n            sleep_rating = EXCLUDED.sleep_rating, total_interruption_s = EXCLUDED.total_interruption_s,\n            short_interruption_s = EXCLUDED.short_interruption_s,\n            long_interruption_s = EXCLUDED.long_interruption_s, sleep_cycles = EXCLUDED.sleep_cycles,\n            group_duration_score = EXCLUDED.group_duration_score,\n            group_solidity_score = EXCLUDED.group_solidity_score,\n            group_regeneration_score = EXCLUDED.group_regeneration_score,\n            hypnogram = EXCLUDED.hypnogram, heart_rate_samples = EXCLUDED.heart_rate_samples,\n            raw = EXCLUDED.raw, synced_at = now()\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "Float4",
+        "Int2",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int2",
+        "Int2",
+        "Int4",
+        "Int2",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int2",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Jsonb",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e349b653a5cf2ccb6d1efddc3c72d2f29441147f80875b01f41092f146fecdba"
+}

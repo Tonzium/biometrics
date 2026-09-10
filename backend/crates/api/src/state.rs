@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use polar_client::PolarClient;
 use sqlx::PgPool;
+use tokio::sync::Mutex;
 
 use crate::{config::Config, crypto::TokenCipher};
 
@@ -14,6 +15,8 @@ pub struct AppState {
     pub cipher: Arc<TokenCipher>,
     /// `None`, jos Polar-tunnuksia ei ole asetettu.
     pub polar: Option<PolarClient>,
+    /// Varmistaa, että vain yksi synkronointi on käynnissä kerrallaan.
+    pub sync_lock: Arc<Mutex<()>>,
 }
 
 impl AppState {
@@ -25,6 +28,7 @@ impl AppState {
             pool,
             cipher,
             polar,
+            sync_lock: Arc::new(Mutex::new(())),
         })
     }
 }

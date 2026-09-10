@@ -24,7 +24,7 @@ sqlx = { version = "0.9", default-features = false, features = [
 ] }
 
 # HTTP client (Polar AccessLink)
-reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "form", "http2", "charset"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "form", "query", "http2", "charset"] }
 
 # Serialization & data types
 serde = { version = "1.0", features = ["derive"] }

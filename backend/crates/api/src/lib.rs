@@ -12,6 +12,7 @@ pub mod error;
 pub mod routes;
 pub mod seed;
 pub mod state;
+pub mod sync;
 
 pub use config::Config;
 pub use state::AppState;

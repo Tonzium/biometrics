@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO nightly_recharge (\n            polar_account_id, date, heart_rate_avg, beat_to_beat_avg_ms, hrv_avg_ms,\n            breathing_rate_avg, nightly_recharge_status, ans_charge, ans_charge_status,\n            hrv_samples, breathing_samples, raw\n        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)\n        ON CONFLICT (polar_account_id, date) DO UPDATE SET\n            heart_rate_avg = EXCLUDED.heart_rate_avg, beat_to_beat_avg_ms = EXCLUDED.beat_to_beat_avg_ms,\n            hrv_avg_ms = EXCLUDED.hrv_avg_ms, breathing_rate_avg = EXCLUDED.breathing_rate_avg,\n            nightly_recharge_status = EXCLUDED.nightly_recharge_status, ans_charge = EXCLUDED.ans_charge,\n            ans_charge_status = EXCLUDED.ans_charge_status, hrv_samples = EXCLUDED.hrv_samples,\n            breathing_samples = EXCLUDED.breathing_samples, raw = EXCLUDED.raw, synced_at = now()\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Float4",
+        "Int2",
+        "Float4",
+        "Int2",
+        "Jsonb",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2afab28f43d14b86845ff0985f3eb466f027f652f5ef4230a42bcc6dedddde36"
+}

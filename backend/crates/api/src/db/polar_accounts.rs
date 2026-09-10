@@ -82,3 +82,13 @@ pub async fn delete_by_user(pool: &PgPool, app_user_id: Uuid) -> sqlx::Result<u6
     .await?;
     Ok(result.rows_affected())
 }
+
+pub async fn set_last_sync_at(pool: &PgPool, account_id: Uuid) -> sqlx::Result<()> {
+    sqlx::query!(
+        "UPDATE polar_accounts SET last_sync_at = now() WHERE id = $1",
+        account_id
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}

@@ -1,6 +1,7 @@
 mod auth;
 mod health;
 mod polar;
+mod sync;
 
 use axum::Router;
 use tower_http::trace::TraceLayer;
@@ -13,7 +14,8 @@ pub fn router(state: AppState) -> Router {
     let api = Router::new()
         .merge(health::router())
         .merge(auth::router())
-        .merge(polar::router());
+        .merge(polar::router())
+        .merge(sync::router());
 
     Router::new()
         .nest("/api", api)

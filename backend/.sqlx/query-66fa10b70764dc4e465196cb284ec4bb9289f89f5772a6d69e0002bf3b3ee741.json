@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO cardio_load (\n            polar_account_id, date, status, cardio_load, strain, tolerance, cardio_load_ratio,\n            cardio_load_level, raw\n        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n        ON CONFLICT (polar_account_id, date) DO UPDATE SET\n            status = EXCLUDED.status, cardio_load = EXCLUDED.cardio_load, strain = EXCLUDED.strain,\n            tolerance = EXCLUDED.tolerance, cardio_load_ratio = EXCLUDED.cardio_load_ratio,\n            cardio_load_level = EXCLUDED.cardio_load_level, raw = EXCLUDED.raw, synced_at = now()\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Text",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "66fa10b70764dc4e465196cb284ec4bb9289f89f5772a6d69e0002bf3b3ee741"
+}

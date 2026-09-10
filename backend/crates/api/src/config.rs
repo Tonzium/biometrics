@@ -20,6 +20,9 @@ pub struct Config {
     /// AES-256-avain Polar-tokenin salaamiseen levossa.
     pub encryption_key: [u8; 32],
 
+    /// Ajastetun synkronoinnin väli tunteina; 0 = vain manuaalinen.
+    pub sync_interval_hours: u64,
+
     /// Polar AccessLink -asiakkaan tunnukset. `None`, jos niitä ei ole
     /// asetettu: palvelin käynnistyy, mutta Polar-yhdistäminen palauttaa 503.
     pub polar: Option<PolarConfig>,
@@ -65,6 +68,8 @@ impl Config {
             }
         };
 
+        let sync_interval_hours = optional_parsed("SYNC_INTERVAL_HOURS", 6)?;
+
         let admin_email = optional("ADMIN_EMAIL").map(|e| e.to_lowercase());
         let admin_password = optional("ADMIN_PASSWORD");
 
@@ -75,6 +80,7 @@ impl Config {
             session_hours,
             cookie_secure,
             encryption_key,
+            sync_interval_hours,
             polar,
             admin_email,
             admin_password,
@@ -90,6 +96,7 @@ impl Config {
             session_hours: 1,
             cookie_secure: false,
             encryption_key: [7u8; 32],
+            sync_interval_hours: 0,
             polar: None,
             admin_email: None,
             admin_password: None,

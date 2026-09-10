@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE sync_runs\n         SET status = $2, counts = $3, error = $4, finished_at = now()\n         WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "971d8c5a39cb132a2a8b9b4c4a2695f9d03ba4ec28932e06db30e847d8ce07bb"
+}

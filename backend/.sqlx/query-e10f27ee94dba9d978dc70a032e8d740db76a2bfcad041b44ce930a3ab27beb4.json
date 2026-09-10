@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO physical_info (\n            polar_account_id, date, modified_at, weight_kg, height_cm, maximum_heart_rate,\n            resting_heart_rate, aerobic_threshold, anaerobic_threshold, vo2_max, weight_source,\n            training_background, typical_day, sleep_goal_s, raw\n        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)\n        ON CONFLICT (polar_account_id, date) DO UPDATE SET\n            modified_at = EXCLUDED.modified_at, weight_kg = EXCLUDED.weight_kg,\n            height_cm = EXCLUDED.height_cm, maximum_heart_rate = EXCLUDED.maximum_heart_rate,\n            resting_heart_rate = EXCLUDED.resting_heart_rate,\n            aerobic_threshold = EXCLUDED.aerobic_threshold,\n            anaerobic_threshold = EXCLUDED.anaerobic_threshold, vo2_max = EXCLUDED.vo2_max,\n            weight_source = EXCLUDED.weight_source, training_background = EXCLUDED.training_background,\n            typical_day = EXCLUDED.typical_day, sleep_goal_s = EXCLUDED.sleep_goal_s,\n            raw = EXCLUDED.raw, synced_at = now()\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Timestamptz",
+        "Float4",
+        "Float4",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e10f27ee94dba9d978dc70a032e8d740db76a2bfcad041b44ce930a3ab27beb4"
+}

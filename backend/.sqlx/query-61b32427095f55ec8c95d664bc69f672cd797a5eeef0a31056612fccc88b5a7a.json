@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO daily_activity (\n            polar_account_id, date, start_time, end_time, active_duration_s, inactive_duration_s,\n            daily_activity_pct, calories, active_calories, steps, inactivity_alert_count,\n            distance_from_steps_m, samples, raw\n        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)\n        ON CONFLICT (polar_account_id, date) DO UPDATE SET\n            start_time = EXCLUDED.start_time, end_time = EXCLUDED.end_time,\n            active_duration_s = EXCLUDED.active_duration_s,\n            inactive_duration_s = EXCLUDED.inactive_duration_s,\n            daily_activity_pct = EXCLUDED.daily_activity_pct, calories = EXCLUDED.calories,\n            active_calories = EXCLUDED.active_calories, steps = EXCLUDED.steps,\n            inactivity_alert_count = EXCLUDED.inactivity_alert_count,\n            distance_from_steps_m = EXCLUDED.distance_from_steps_m, samples = EXCLUDED.samples,\n            raw = EXCLUDED.raw, synced_at = now()\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Timestamp",
+        "Timestamp",
+        "Int4",
+        "Int4",
+        "Float4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int2",
+        "Float4",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "61b32427095f55ec8c95d664bc69f672cd797a5eeef0a31056612fccc88b5a7a"
+}
