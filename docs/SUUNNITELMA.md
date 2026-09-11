@@ -106,8 +106,9 @@ Lopputyo/
 ├── docs/
 │   ├── Guide.md              kurssimateriaali
 │   ├── SUUNNITELMA.md        tämä tiedosto
-│   ├── ARKKITEHTUURI.md      tarkempi kuvaus + ADR:t (kirjoitetaan työn aikana)
-│   └── API.md                generoitu OpenAPI-yhteenveto
+│   ├── ARKKITEHTUURI.md      rakenne, virrat, tietoturva, ADR:t
+│   ├── JULKAISU.md           palvelinasennus askel askeleelta
+│   └── RAPORTTI.md           kurssiraportti (OpenAPI-kuvaus on ajossa /api/docs)
 ├── .github/workflows/ci.yml
 └── README.md
 ```
@@ -196,8 +197,8 @@ Tuotanto ajetaan kotipalvelimen Proxmox-kontissa `pve2` (192.168.68.45), johon a
 | Palvelu | Image | Portit | Huomiot |
 |---|---|---|---|
 | `db` | postgres:18-alpine | ei julkaistu | nimetty volume `pgdata`, healthcheck `pg_isready` |
-| `api` | oma monivaiheinen build (rust:1.98 → debian-slim) | ei julkaistu | lukee `.env`:n, `depends_on: db: condition: service_healthy` |
-| `web` | oma build (node:24 → nginx:alpine) | ei julkaistu | staattinen build + `/api` proxy |
+| `api` | `ghcr.io/<owner>/<repo>-api` (CI rakentaa: rust:1.98 → debian-slim) | ei julkaistu | lukee `.env`:n, `depends_on: db: condition: service_healthy` |
+| `web` | `ghcr.io/<owner>/<repo>-web` (CI rakentaa: node:24 → nginx:alpine) | ei julkaistu | staattinen build + `/api` proxy |
 | `cloudflared` | cloudflare/cloudflared | ei julkaistu | `tunnel run`, token `.env`:stä; ingress (`biometrics.tonikiuru.com` → `http://web:80`) määritellään Cloudflaren hallintapaneelissa, joten erillistä config.yml:ää ei tarvita |
 
 Tarkka ohje: `docs/JULKAISU.md`. Askeleet lyhyesti:
@@ -206,7 +207,7 @@ Tarkka ohje: `docs/JULKAISU.md`. Askeleet lyhyesti:
 2. Tunnelin public hostname `biometrics.tonikiuru.com` → `http://web:80`. Cloudflare luo CNAME-tietueen automaattisesti.
 3. Cloudflare SSL/TLS-tila "Full" ja "Always Use HTTPS".
 4. Valinnainen lisäkerros: Cloudflare Access -sääntö, joka päästää vain omaan sähköpostiin kirjautuneet. Sovelluksen oma kirjautuminen jää silti paikalleen kurssivaatimuksena.
-5. Palvelimella: `git pull && docker compose -f deploy/docker-compose.yml up -d --build`.
+5. Palvelimella: `./deploy/deploy.sh` (git pull, `docker compose pull`, `up -d`). Imaget rakennetaan CI:ssä, joten palvelimen ei tarvitse kääntää Rustia.
 
 Salaisuudet (`.env`, ei koskaan gitiin): `DATABASE_URL`, `JWT_SECRET`, `APP_ENCRYPTION_KEY`, `POLAR_CLIENT_ID`, `POLAR_CLIENT_SECRET`, `POLAR_REDIRECT_URL`, `CLOUDFLARE_TUNNEL_TOKEN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (vain ensimmäistä käynnistystä varten).
 
@@ -228,9 +229,9 @@ Salaisuudet (`.env`, ei koskaan gitiin): `DATABASE_URL`, `JWT_SECRET`, `APP_ENCR
 | 4. Synkronointi ✅ 10.9.2026 | polar-clientin datareitit + tyypitetyt mallit + ISO 8601 -kestot, upsertit kuuteen tauluun, sync_runs-loki, `POST /api/sync`, `GET /api/sync/runs`, ajastin (SYNC_INTERVAL_HOURS), 429 keskeyttää ajon | mock-Polaria vasten: 2 ajoa ei duplikoi rivejä, partial/failed-tilat testattu. Oikea data vaatii Polar-tunnukset `.env`:iin |
 | 5. Data-API ✅ 10.9.2026 | julkiset lukureitit (exercises sivutettuna + laji/aikasuodatin, sleep, recharge, activity, cardio-load, physical), summary overview/daily/weekly, `PUBLIC_READ`-lippu ja `ReadAccess`-ekstraktori, `/api/meta`, OpenAPI `/api/openapi.json` + Swagger UI `/api/docs` | 8 uutta integraatiotestiä; tyypit generoituvat frontendiin (`npm run gen:api`) |
 | 6. Frontend ✅ 10.9.2026 | Vite 8 + React 19 + TS: yleiskuva, harjoitukset (suodatus, sivutus, yksityiskohdat sykevyöhykkeineen), uni ja palautuminen, aktiivisuus ja kuormitus, kirjautuminen, asetukset (Polar-yhdistys, synkronointi, ajoloki); Recharts-kaaviot; generoidut API-tyypit; nginx.conf + Dockerfile | koko käyttöpolku katselmoitu selaimessa demo-datalla; 12 Vitest-testiä |
-| 7. Testit + CI ✅ 11.9.2026 | 59 backend-testiä (yksikkö + `#[sqlx::test]`-integraatio mock-Polaria vasten), 12 frontend-testiä; GitHub Actions: rust (fmt, clippy offline, testit Postgres-palvelukontilla), node (typecheck, lint, test, build), docker (molemmat imaget + compose-validointi); backendin monivaiheinen Dockerfile; `docker-compose.local.yml` tuotantopinon koeajoon ilman tunnelia | CI vihreä ensimmäisellä pushilla; pino ajettu paikallisesti konteissa |
+| 7. Testit + CI ✅ 11.9.2026 | 59 backend-testiä (yksikkö + `#[sqlx::test]`-integraatio mock-Polaria vasten), 12 frontend-testiä; GitHub Actions: rust (fmt, clippy offline, testit Postgres-palvelukontilla), node (typecheck, lint, test, build), docker (molemmat imaget + compose-validointi); backendin monivaiheinen Dockerfile; `docker-compose.local.yml` tuotantopinon koeajoon ilman tunnelia | CI vihreä GitHubissa 11.9.2026 (kaksi korjausta: testivaihe tarvitsi `SQLX_OFFLINE`, compose-validointi `.env`-tiedoston); pino ajettu paikallisesti konteissa |
 | 8. Julkaisu 🔄 | Dockerfilet ja compose valmiit ja koeajettu; `docs/JULKAISU.md` askel askeleelta (LXC nesting, Docker, .env, Cloudflare Tunnel, Access), `deploy/deploy.sh` päivitykseen, `deploy/backup.sh` pg_dump-varmuuskopioon. Palvelinaskeleet ja Cloudflare-asetukset tekee Toni (vaativat pääsyn pve2:een ja Cloudflare-tiliin) | https://biometrics.tonikiuru.com toimii |
-| 9. Dokumentointi | README, ARKKITEHTUURI.md, kurssiraportti | |
+| 9. Dokumentointi ✅ 11.9.2026 | README, `ARKKITEHTUURI.md` (rakenne, virrat, tietoturva, 9 ADR:ää, testausstrategia), `JULKAISU.md`, `RAPORTTI.md` (kurssin aiheet → toteutus, AI-käytön kriittinen arviointi; omat pohdinnat merkitty `[TÄYDENNÄ]`) | |
 
 Laajennukset, jos aikaa jää: Polar-webhookit (`POST /v3/webhooks`, mahdollista koska julkinen osoite on olemassa), jatkuva syke `GET /v3/users/continuous-heart-rate/{date}`, harjoituksen FIT/GPX-lataus ja reittikartta, PWA-asennettavuus.
 

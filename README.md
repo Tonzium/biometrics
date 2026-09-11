@@ -4,7 +4,7 @@ Full stack -web-sovellus, joka hakee omat harjoitus-, uni-, palautumis- ja aktii
 Polar Flow -kellosta (Polar AccessLink API), tallentaa ne pysyvästi PostgreSQL-kantaan ja
 näyttää ne React-käyttöliittymässä. KAMK:n Web-sovelluskehitys-kurssin lopputyö.
 
-Suunnitelma ja arkkitehtuuri: [docs/SUUNNITELMA.md](docs/SUUNNITELMA.md) · Julkaisuohje: [docs/JULKAISU.md](docs/JULKAISU.md)
+Dokumentit: [suunnitelma](docs/SUUNNITELMA.md) · [arkkitehtuuri ja päätökset](docs/ARKKITEHTUURI.md) · [julkaisuohje](docs/JULKAISU.md) · [kurssiraportti](docs/RAPORTTI.md)
 
 ## Pino
 
@@ -57,21 +57,24 @@ Ilman tunnuksia palvelin käynnistyy normaalisti, mutta yhdistäminen palauttaa 
 
 ## Tuotantopino paikallisesti
 
-Koko pino (Postgres, Rust-api, nginx + React) konteissa ilman Cloudflare-tunnelia:
+Koko pino (Postgres, Rust-api, nginx + React) konteissa ilman Cloudflare-tunnelia, imaget
+rakennetaan lähdekoodista:
 
 ```bash
-docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.local.yml up -d --build
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml -f deploy/docker-compose.local.yml up -d --build
 ```
 
-Sovellus vastaa osoitteessa http://localhost:8088. Tuotannossa sama ilman override-tiedostoa
-(`docker compose -f deploy/docker-compose.yml up -d --build`), jolloin portteja ei julkaista ja
-cloudflared avaa tunnelin.
+Sovellus vastaa osoitteessa http://localhost:8088. Tuotannossa imaget vedetään GitHub Container
+Registrystä (`docker compose -f deploy/docker-compose.yml pull && ... up -d`), portteja ei julkaista
+ja cloudflared avaa tunnelin. Ks. [docs/JULKAISU.md](docs/JULKAISU.md).
 
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) ajaa jokaisella pushilla backendin fmt/clippy/testit
 Postgres-palvelukonttia vasten, frontendin typecheck/lint/test/build sekä molempien Docker-imagejen
-buildin. Clippy ajetaan `SQLX_OFFLINE=true`, joten unohtunut `cargo sqlx prepare` kaataa putken.
+buildin. Push `master`-haaraan julkaisee imaget GitHub Container Registryyn
+(`ghcr.io/<owner>/<repo>-api` ja `-web`, tagit `latest` ja commitin sha). Clippy ja testit ajetaan
+`SQLX_OFFLINE=true`, joten unohtunut `cargo sqlx prepare` kaataa putken.
 
 ## Rajapinta
 

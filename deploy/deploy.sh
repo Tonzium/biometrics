@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Päivittää sovelluksen palvelimella: hakee uusimman koodin, rakentaa imaget ja
-# käynnistää muuttuneet kontit. Ajetaan repon juuressa:  ./deploy/deploy.sh
+# Päivittää sovelluksen palvelimella: hakee uusimman koodin (compose-tiedostot,
+# skriptit), vetää CI:n rakentamat imaget ja käynnistää muuttuneet kontit.
+# Ajetaan repon juuressa:  ./deploy/deploy.sh
+# Rakenna itse lähdekoodista:  BUILD=1 ./deploy/deploy.sh
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -14,8 +16,14 @@ fi
 echo "== git pull"
 git pull --ff-only
 
-echo "== build & up"
-$COMPOSE up -d --build --remove-orphans
+if [[ "${BUILD:-0}" == "1" ]]; then
+    echo "== build lähdekoodista & up"
+    $COMPOSE -f deploy/docker-compose.build.yml up -d --build --remove-orphans
+else
+    echo "== pull & up"
+    $COMPOSE pull --quiet
+    $COMPOSE up -d --remove-orphans
+fi
 
 echo "== odotetaan api:n healthcheckiä"
 for _ in $(seq 1 30); do

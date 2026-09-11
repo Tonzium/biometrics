@@ -1,0 +1,14 @@
+# Rakentaa imaget lähdekoodista rekisteristä vetämisen sijaan.
+#
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml up -d --build
+#
+# Tarvitaan kehityksessä ja jos palvelimella halutaan rakentaa itse (Rust-käännös
+# tarvitsee 2–4 GB muistia). Tuotannossa suositus on vetää CI:n rakentamat imaget.
+
+services:
+  api:
+    build:
+      context: ../backend
+  web:
+    build:
+      context: ../frontend

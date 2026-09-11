@@ -14,7 +14,9 @@ Ohje on kirjoitettu Debian 12/13 -pohjaiselle LXC-kontille. Ubuntu toimii samoin
 
 - [ ] Proxmox-kontissa on **nesting** päällä (Docker ei muuten käynnisty LXC:ssä):
       Proxmox → kontti → Options → Features → `nesting=1`. Unprivileged-kontti riittää.
-- [ ] Kontilla on vähintään 2 CPU, 2 GB RAM ja 10 GB levyä (Rust-käännös kontissa tarvitsee muistia).
+- [ ] Kontilla on vähintään 1 CPU, 1 GB RAM ja 8 GB levyä. Imaget rakennetaan GitHub Actionsissa,
+      joten palvelin ei käännä Rustia. (Jos haluat rakentaa palvelimella, varaa 4 GB RAM.)
+- [ ] GitHub-repo on julkinen **tai** palvelimelle on tehty `docker login ghcr.io` (kohta 4).
 - [ ] `tonikiuru.com` on Cloudflaren nimipalvelimilla (on).
 - [ ] Polar-kehittäjätilillä (https://admin.polaraccesslink.com) on **tuotantoasiakas**, jonka
       redirect URL on täsmälleen `https://biometrics.tonikiuru.com/api/polar/callback`.
@@ -50,7 +52,7 @@ su - polar
 ## 2. Koodi ja asetukset
 
 ```bash
-git clone https://github.com/Tonzium/<repo>.git polar-data-hub   # korvaa repon nimi
+git clone https://github.com/Tonzium/biometrics.git polar-data-hub
 cd polar-data-hub
 cp deploy/.env.example deploy/.env
 chmod 600 deploy/.env
@@ -72,6 +74,7 @@ Täytä `deploy/.env` seuraavasti. Salaisuudet generoidaan komennoilla, älä ke
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | omistajatunnus; luetaan vain ensimmäisellä käynnistyksellä tyhjään kantaan. Vähintään 12 merkkiä. |
 | `POLAR_CLIENT_ID`, `POLAR_CLIENT_SECRET` | tuotantoasiakkaan tunnukset |
 | `POLAR_REDIRECT_URL` | `https://biometrics.tonikiuru.com/api/polar/callback` |
+| `IMAGE_PREFIX`, `IMAGE_TAG` | `ghcr.io/tonzium/biometrics` ja `latest`; vaihda prefix, jos repon nimi on toinen |
 | `CLOUDFLARE_TUNNEL_TOKEN` | kohdasta 3 |
 
 ## 3. Cloudflare Tunnel
@@ -94,12 +97,26 @@ Täytä `deploy/.env` seuraavasti. Salaisuudet generoidaan komennoilla, älä ke
 
 ## 4. Käynnistys
 
+Imaget tulevat valmiina GitHub Container Registrystä: CI rakentaa ja julkaisee ne jokaisesta
+pushista `master`-haaraan tageilla `latest` ja commitin sha. Jos repo on yksityinen, kirjaudu ensin
+GitHubin personal access tokenilla, jolla on `read:packages`-oikeus:
+
 ```bash
-cd ~/polar-data-hub
-docker compose -f deploy/docker-compose.yml up -d --build
+echo "<PAT>" | docker login ghcr.io -u Tonzium --password-stdin
 ```
 
-Ensimmäinen build kestää Rust-käännöksen takia 5–15 minuuttia kontin tehoista riippuen.
+Sitten:
+
+```bash
+cd ~/polar-data-hub
+docker compose -f deploy/docker-compose.yml pull
+docker compose -f deploy/docker-compose.yml up -d
+```
+
+Pull kestää alle minuutin. Jos haluat rakentaa imaget palvelimella itse (esim. testataksesi
+committia, jota ei ole vielä pushattu), lisää build-override:
+`docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml up -d --build`.
+
 Seuraa:
 
 ```bash
@@ -128,11 +145,15 @@ Tarkistus selaimella:
 
 ## 6. Ylläpito
 
-**Päivitys** (uusi koodi GitHubissa):
+**Päivitys** (uusi koodi GitHubissa ja CI vihreä):
 
 ```bash
-./deploy/deploy.sh
+./deploy/deploy.sh            # git pull + docker compose pull + up
+BUILD=1 ./deploy/deploy.sh    # sama, mutta rakentaa imaget palvelimella
 ```
+
+**Tietyn version ajo**: aseta `.env`-tiedostoon `IMAGE_TAG=<commitin lyhyt sha>` ja aja `deploy.sh`.
+Paluu edelliseen versioon on sama temppu toiseen suuntaan.
 
 **Varmuuskopio** kantaa (pg_dump, 30 päivän säilytys):
 
@@ -165,7 +186,9 @@ Docker käynnistyy bootissa.
 | `api` ei käynnisty: "no users exist and ADMIN_EMAIL…" | Ensimmäinen käynnistys ilman admin-muuttujia. Lisää ne ja käynnistä uudelleen. |
 | `api` ei käynnisty: "APP_ENCRYPTION_KEY must decode to exactly 32 bytes" | Generoi avain komennolla `openssl rand -base64 32`. |
 | Synkronointi on `failed` ja virhe mainitsee 429 | Polarin rate limit. Odota `RateLimit-Reset`-ajan verran; ajastin yrittää uudelleen. |
-| Build kaatuu muistin loppumiseen | Lisää kontille RAMia (4 GB) tai swap. Vaihtoehtoisesti rakenna image toisella koneella ja siirrä `docker save`/`docker load`. |
+| `pull` antaa `denied` tai `unauthorized` | Repo on yksityinen: `docker login ghcr.io` (kohta 4) tai tee paketit julkisiksi GitHubissa (Packages → package → Settings → Change visibility). |
+| `pull` antaa `manifest unknown` | CI ei ole vielä julkaissut imagea tälle tagille: tarkista Actions-välilehti ja `IMAGE_PREFIX`/`IMAGE_TAG`. |
+| Build palvelimella kaatuu muistin loppumiseen | Käytä CI:n imageja (oletus) tai lisää kontille RAMia (4 GB). |
 
 ## 8. Mitä palvelimella EI ole
 

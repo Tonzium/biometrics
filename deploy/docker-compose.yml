@@ -1,8 +1,13 @@
 # Tuotantopino: db + api + web(nginx) + cloudflared.
 # Yksikään palvelu ei julkaise portteja isäntäkoneelle; liikenne tulee vain tunnelin kautta.
 #
-#   cp .env.example .env   # täytä arvot
-#   docker compose up -d --build
+# Imaget tulevat valmiina GitHub Container Registrystä (CI rakentaa ne jokaisella pushilla):
+#
+#   cp deploy/.env.example deploy/.env   # täytä arvot
+#   docker compose -f deploy/docker-compose.yml pull
+#   docker compose -f deploy/docker-compose.yml up -d
+#
+# Paikallinen build lähdekoodista: lisää -f deploy/docker-compose.build.yml (ks. docker-compose.local.yml).
 
 name: polar-data-hub
 
@@ -24,8 +29,7 @@ services:
       retries: 12
 
   api:
-    build:
-      context: ../backend
+    image: ${IMAGE_PREFIX:-ghcr.io/tonzium/biometrics}-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env
     environment:
@@ -39,8 +43,7 @@ services:
       - "8080"
 
   web:
-    build:
-      context: ../frontend
+    image: ${IMAGE_PREFIX:-ghcr.io/tonzium/biometrics}-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       api:
