@@ -16,6 +16,10 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Recharts on iso; yksi 700 kt:n chunk on tälle sovellukselle hyväksyttävä.
+    chunkSizeWarningLimit: 800,
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

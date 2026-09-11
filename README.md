@@ -13,7 +13,7 @@ Suunnitelma ja arkkitehtuuri: [docs/SUUNNITELMA.md](docs/SUUNNITELMA.md)
 | Backend | Rust 1.98 (edition 2024), axum 0.8, sqlx 0.9, reqwest 0.13 |
 | Frontend | TypeScript 5.9, React 19, Vite 8, TanStack Query, react-router, Recharts |
 | Tietokanta | PostgreSQL 18 |
-| Julkaisu | Docker Compose, nginx, Cloudflare Tunnel → https://polar.tonikiuru.com |
+| Julkaisu | Docker Compose, nginx, Cloudflare Tunnel → https://biometrics.tonikiuru.com |
 
 ## Kehitysympäristö
 
@@ -36,13 +36,19 @@ cd frontend && npm install && npm run dev
 
 `sqlx::query!`-makrot tarkistavat SQL:n käännösaikana; siksi `backend/.env` sisältää `DATABASE_URL`-rivin dev-kantaan (git-ignoroitu).
 
+Demo-data ilman Polar-tunnuksia (kun backend on kerran käynnistetty ja omistaja luotu):
+
+```bash
+docker exec -i polar-data-hub-dev-db-1 psql -U polar -d polar < backend/scripts/demo_seed.sql
+```
+
 Tarkistus: http://localhost:8787/api/health palauttaa `{"status":"ok","database":"up",...}`.
 
 ## Polar-tunnukset
 
 1. Luo asiakas osoitteessa https://admin.polaraccesslink.com. Redirect URL kehityksessä on
    `http://localhost:5173/api/polar/callback` (Vite-proxyn kautta, jotta istuntocookie kulkee mukana),
-   tuotannossa `https://polar.tonikiuru.com/api/polar/callback`. Kumpaakin varten tarvitaan oma asiakas.
+   tuotannossa `https://biometrics.tonikiuru.com/api/polar/callback`. Kumpaakin varten tarvitaan oma asiakas.
 2. Kirjoita `POLAR_CLIENT_ID`, `POLAR_CLIENT_SECRET` ja `POLAR_REDIRECT_URL` tiedostoon `deploy/.env`.
 3. Kirjaudu sovellukseen omistajana ja avaa `/api/polar/connect` (asetussivu tekee tämän). Token
    tallennetaan kantaan AES-256-GCM-salattuna (`APP_ENCRYPTION_KEY`).
@@ -72,7 +78,7 @@ synkronointi vaativat omistajan kirjautumisen. `PUBLIC_READ=false` sulkee kaiken
 
 ```
 backend/    Cargo workspace: crates/api (palvelin), crates/polar-client, crates/domain, migrations/
-frontend/   Vite + React + TypeScript
+frontend/   Vite + React + TypeScript: src/pages (sivut), src/components (kaaviot ym.), src/api (client, hooks, generoidut tyypit)
 deploy/     docker-compose.yml (tuotanto), docker-compose.dev.yml (kehityskanta), .env.example
 docs/       suunnitelma ja kurssimateriaali
 ```

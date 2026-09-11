@@ -3,7 +3,7 @@
 **Kurssi:** Web-sovelluskehitys (KAMK), Full stack
 **Tekijä:** Toni Kiuru
 **Päivämäärä:** 10.9.2026
-**Tuotanto-osoite:** https://polar.tonikiuru.com
+**Tuotanto-osoite:** https://biometrics.tonikiuru.com
 
 ## 1. Tavoite
 
@@ -170,11 +170,12 @@ Virheet palautetaan yhtenäisenä JSON-muotona `{ "error": { "code": "...", "mes
 - OAuth2 authorization code -virta käsin reqwestillä (Polarin token-vastaus sisältää epästandardin `x_user_id`-kentän, joten valmis oauth2-crate ei istu suoraan).
 - Token ei vanhene, mutta se salataan kantaan sovelluksen avaimella (`APP_ENCRYPTION_KEY`).
 - Jokaiselle datatyypille oma tyypitetty vastausrakenne serdellä. Tuntemattomat kentät säilyvät `raw`-sarakkeessa.
-- Polar-kehittäjätilille (admin.polaraccesslink.com) tarvitaan kaksi asiakasta, koska redirect URL on kiinteä: `http://localhost:5173/api/polar/callback` kehitykseen (Vite-proxyn kautta, jotta istuntocookie on mukana) ja `https://polar.tonikiuru.com/api/polar/callback` tuotantoon.
+- Polar-kehittäjätilille (admin.polaraccesslink.com) tarvitaan kaksi asiakasta, koska redirect URL on kiinteä: `http://localhost:5173/api/polar/callback` kehitykseen (Vite-proxyn kautta, jotta istuntocookie on mukana) ja `https://biometrics.tonikiuru.com/api/polar/callback` tuotantoon.
 
 ## 6. Frontend
 
-- Vite + React 19 + TypeScript strict. Ei UI-kirjastoa, CSS-moduulit tai kevyt oma tyylitys.
+- Vite + React 19 + TypeScript strict. Ei UI-kirjastoa; yksi `index.css` CSS-muuttujilla, responsiivinen grid.
+- Julkinen näyteikkuna: `ReadGuard` päästää datasivuille ilman kirjautumista, kun `/api/meta` kertoo `public_read=true`; `OwnerGuard` suojaa asetussivun aina.
 - TanStack Query hoitaa API-kutsut, välimuistin ja lataus/virhetilat. react-router hoitaa sivut ja suojatut reitit.
 - Sivut:
   1. **Kirjautuminen**
@@ -183,7 +184,8 @@ Virheet palautetaan yhtenäisenä JSON-muotona `{ "error": { "code": "...", "mes
   4. **Uni ja palautuminen** – univaiheet pinottuna palkkikaaviona, HRV-trendi
   5. **Aktiivisuus** – askeleet ja kalorit päivittäin
   6. **Asetukset** – Polar-tilin yhdistäminen/irrotus, "Synkronoi nyt", synkronointiloki
-- API-tyypit generoidaan komennolla `npm run gen:api` backendin OpenAPI-kuvauksesta.
+- API-tyypit generoidaan komennolla `npm run gen:api` backendin OpenAPI-kuvauksesta (`src/api/schema.d.ts`, commitoidaan). `src/api/types.ts` antaa niille lyhyet nimet ja `hooks.ts` sitoo ne TanStack Query -hookeiksi.
+- Demo-data ilman Polar-tunnuksia: `backend/scripts/demo_seed.sql`.
 
 ## 7. Julkaisu
 
@@ -196,12 +198,12 @@ Tuotanto ajetaan kotipalvelimen Proxmox-kontissa `pve2` (192.168.68.45), johon a
 | `db` | postgres:18-alpine | ei julkaistu | nimetty volume `pgdata`, healthcheck `pg_isready` |
 | `api` | oma monivaiheinen build (rust:1.98 → debian-slim) | ei julkaistu | lukee `.env`:n, `depends_on: db: condition: service_healthy` |
 | `web` | oma build (node:24 → nginx:alpine) | ei julkaistu | staattinen build + `/api` proxy |
-| `cloudflared` | cloudflare/cloudflared | ei julkaistu | `tunnel run`, token `.env`:stä; ingress (`polar.tonikiuru.com` → `http://web:80`) määritellään Cloudflaren hallintapaneelissa, joten erillistä config.yml:ää ei tarvita |
+| `cloudflared` | cloudflare/cloudflared | ei julkaistu | `tunnel run`, token `.env`:stä; ingress (`biometrics.tonikiuru.com` → `http://web:80`) määritellään Cloudflaren hallintapaneelissa, joten erillistä config.yml:ää ei tarvita |
 
 Askeleet:
 
 1. Cloudflare Zero Trust → Networks → Tunnels → luo tunneli, kopioi token.
-2. Tunnelin public hostname `polar.tonikiuru.com` → `http://web:80`. Cloudflare luo CNAME-tietueen automaattisesti.
+2. Tunnelin public hostname `biometrics.tonikiuru.com` → `http://web:80`. Cloudflare luo CNAME-tietueen automaattisesti.
 3. Cloudflare SSL/TLS-tila "Full" ja "Always Use HTTPS".
 4. Valinnainen lisäkerros: Cloudflare Access -sääntö, joka päästää vain omaan sähköpostiin kirjautuneet. Sovelluksen oma kirjautuminen jää silti paikalleen kurssivaatimuksena.
 5. Palvelimella: `git pull && docker compose -f deploy/docker-compose.yml up -d --build`.
@@ -225,9 +227,9 @@ Salaisuudet (`.env`, ei koskaan gitiin): `DATABASE_URL`, `JWT_SECRET`, `APP_ENCR
 | 3. Polar-yhteys ✅ 10.9.2026 | polar-client (OAuth2, users), AES-256-GCM-salattu token, CSRF-state-cookie, reitit status/connect/callback/disconnect, wiremock-testit | oma Polar-tili näkyy asetuksissa (frontend vaiheessa 6; backend testattu mock-Polaria vasten) |
 | 4. Synkronointi ✅ 10.9.2026 | polar-clientin datareitit + tyypitetyt mallit + ISO 8601 -kestot, upsertit kuuteen tauluun, sync_runs-loki, `POST /api/sync`, `GET /api/sync/runs`, ajastin (SYNC_INTERVAL_HOURS), 429 keskeyttää ajon | mock-Polaria vasten: 2 ajoa ei duplikoi rivejä, partial/failed-tilat testattu. Oikea data vaatii Polar-tunnukset `.env`:iin |
 | 5. Data-API ✅ 10.9.2026 | julkiset lukureitit (exercises sivutettuna + laji/aikasuodatin, sleep, recharge, activity, cardio-load, physical), summary overview/daily/weekly, `PUBLIC_READ`-lippu ja `ReadAccess`-ekstraktori, `/api/meta`, OpenAPI `/api/openapi.json` + Swagger UI `/api/docs` | 8 uutta integraatiotestiä; tyypit generoituvat frontendiin (`npm run gen:api`) |
-| 6. Frontend | sivut, kaaviot, auth-virta, asetukset | koko käyttöpolku toimii localhostissa |
+| 6. Frontend ✅ 10.9.2026 | Vite 8 + React 19 + TS: yleiskuva, harjoitukset (suodatus, sivutus, yksityiskohdat sykevyöhykkeineen), uni ja palautuminen, aktiivisuus ja kuormitus, kirjautuminen, asetukset (Polar-yhdistys, synkronointi, ajoloki); Recharts-kaaviot; generoidut API-tyypit; nginx.conf + Dockerfile | koko käyttöpolku katselmoitu selaimessa demo-datalla; 12 Vitest-testiä |
 | 7. Testit + CI | backend- ja frontend-testit, GitHub Actions vihreänä | |
-| 8. Julkaisu | Dockerfilet, compose, nginx, cloudflared, DNS | https://polar.tonikiuru.com toimii |
+| 8. Julkaisu | Dockerfilet, compose, nginx, cloudflared, DNS | https://biometrics.tonikiuru.com toimii |
 | 9. Dokumentointi | README, ARKKITEHTUURI.md, kurssiraportti | |
 
 Laajennukset, jos aikaa jää: Polar-webhookit (`POST /v3/webhooks`, mahdollista koska julkinen osoite on olemassa), jatkuva syke `GET /v3/users/continuous-heart-rate/{date}`, harjoituksen FIT/GPX-lataus ja reittikartta, PWA-asennettavuus.
