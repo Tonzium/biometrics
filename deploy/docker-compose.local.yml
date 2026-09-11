@@ -1,0 +1,15 @@
+# Tuotantopinon koeajo omalla koneella ilman Cloudflare-tunnelia:
+#
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.local.yml up -d --build
+#   -> http://localhost:8088
+#
+# Julkaisee web-kontin portin localhostiin ja siirtää cloudflaredin profiiliin,
+# jota ei käynnistetä ilman `--profile tunnel`.
+
+services:
+  web:
+    ports:
+      - "127.0.0.1:8088:80"
+
+  cloudflared:
+    profiles: ["tunnel"]

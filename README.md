@@ -55,6 +55,24 @@ Tarkistus: http://localhost:8787/api/health palauttaa `{"status":"ok","database"
 
 Ilman tunnuksia palvelin käynnistyy normaalisti, mutta yhdistäminen palauttaa 503.
 
+## Tuotantopino paikallisesti
+
+Koko pino (Postgres, Rust-api, nginx + React) konteissa ilman Cloudflare-tunnelia:
+
+```bash
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.local.yml up -d --build
+```
+
+Sovellus vastaa osoitteessa http://localhost:8088. Tuotannossa sama ilman override-tiedostoa
+(`docker compose -f deploy/docker-compose.yml up -d --build`), jolloin portteja ei julkaista ja
+cloudflared avaa tunnelin.
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) ajaa jokaisella pushilla backendin fmt/clippy/testit
+Postgres-palvelukonttia vasten, frontendin typecheck/lint/test/build sekä molempien Docker-imagejen
+buildin. Clippy ajetaan `SQLX_OFFLINE=true`, joten unohtunut `cargo sqlx prepare` kaataa putken.
+
 ## Rajapinta
 
 Backend julkaisee OpenAPI 3 -kuvauksen osoitteessa `/api/openapi.json` ja Swagger UI:n osoitteessa

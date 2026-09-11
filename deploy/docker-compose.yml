@@ -29,6 +29,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      # Ohittaa .env-tiedoston DATABASE_URL:n: kanta on aina compose-verkon `db`.
       DATABASE_URL: postgres://${POSTGRES_USER:-polar}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-polar}
       BIND_ADDR: 0.0.0.0:8080
     depends_on:
@@ -42,7 +43,8 @@ services:
       context: ../frontend
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     expose:
       - "80"
 
@@ -51,7 +53,8 @@ services:
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Aseta CLOUDFLARE_TUNNEL_TOKEN .env-tiedostoon}
+      # Tyhjä token kaataa vain cloudflared-kontin (näkyy lokissa), ei koko pinoa.
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
     depends_on:
       - web
 

@@ -214,7 +214,7 @@ Salaisuudet (`.env`, ei koskaan gitiin): `DATABASE_URL`, `JWT_SECRET`, `APP_ENCR
 
 - **Backend:** yksikkötestit polar-clientin JSON-purulle (tallennetut esimerkkivastaukset), integraatiotestit reiteille `#[sqlx::test]`-makrolla (jokainen testi saa oman väliaikaisen kannan), `cargo clippy -D warnings`, `cargo fmt --check`.
 - **Frontend:** Vitest + React Testing Library komponenteille ja hookeille, `tsc --noEmit`, ESLint.
-- **CI (GitHub Actions):** kaksi jobia (rust, node) + `docker compose build`. Postgres service-kontti testejä varten.
+- **CI (GitHub Actions)** `.github/workflows/ci.yml`: kolme jobia. `backend` ajaa fmt-tarkistuksen, clippyn offline-kyselydatalla (paljastaa vanhentuneen `.sqlx`-kansion) ja testit Postgres 18 -palvelukonttia vasten; `frontend` ajaa typecheckin, lintin, testit ja buildin; `docker` rakentaa molemmat imaget GHA-välimuistilla ja validoi compose-tiedoston.
 - Kurssi mainitsee GitLabin; repo on GitHubissa. Jos palautus vaatii GitLabin, sama repo peilataan sinne.
 
 ## 9. Vaiheistus
@@ -228,7 +228,7 @@ Salaisuudet (`.env`, ei koskaan gitiin): `DATABASE_URL`, `JWT_SECRET`, `APP_ENCR
 | 4. Synkronointi ✅ 10.9.2026 | polar-clientin datareitit + tyypitetyt mallit + ISO 8601 -kestot, upsertit kuuteen tauluun, sync_runs-loki, `POST /api/sync`, `GET /api/sync/runs`, ajastin (SYNC_INTERVAL_HOURS), 429 keskeyttää ajon | mock-Polaria vasten: 2 ajoa ei duplikoi rivejä, partial/failed-tilat testattu. Oikea data vaatii Polar-tunnukset `.env`:iin |
 | 5. Data-API ✅ 10.9.2026 | julkiset lukureitit (exercises sivutettuna + laji/aikasuodatin, sleep, recharge, activity, cardio-load, physical), summary overview/daily/weekly, `PUBLIC_READ`-lippu ja `ReadAccess`-ekstraktori, `/api/meta`, OpenAPI `/api/openapi.json` + Swagger UI `/api/docs` | 8 uutta integraatiotestiä; tyypit generoituvat frontendiin (`npm run gen:api`) |
 | 6. Frontend ✅ 10.9.2026 | Vite 8 + React 19 + TS: yleiskuva, harjoitukset (suodatus, sivutus, yksityiskohdat sykevyöhykkeineen), uni ja palautuminen, aktiivisuus ja kuormitus, kirjautuminen, asetukset (Polar-yhdistys, synkronointi, ajoloki); Recharts-kaaviot; generoidut API-tyypit; nginx.conf + Dockerfile | koko käyttöpolku katselmoitu selaimessa demo-datalla; 12 Vitest-testiä |
-| 7. Testit + CI | backend- ja frontend-testit, GitHub Actions vihreänä | |
+| 7. Testit + CI ✅ 11.9.2026 | 59 backend-testiä (yksikkö + `#[sqlx::test]`-integraatio mock-Polaria vasten), 12 frontend-testiä; GitHub Actions: rust (fmt, clippy offline, testit Postgres-palvelukontilla), node (typecheck, lint, test, build), docker (molemmat imaget + compose-validointi); backendin monivaiheinen Dockerfile; `docker-compose.local.yml` tuotantopinon koeajoon ilman tunnelia | CI vihreä ensimmäisellä pushilla; pino ajettu paikallisesti konteissa |
 | 8. Julkaisu | Dockerfilet, compose, nginx, cloudflared, DNS | https://biometrics.tonikiuru.com toimii |
 | 9. Dokumentointi | README, ARKKITEHTUURI.md, kurssiraportti | |
 
