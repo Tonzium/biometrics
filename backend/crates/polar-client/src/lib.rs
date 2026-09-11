@@ -1,7 +1,7 @@
 //! Polar AccessLink API v3 -asiakas.
 //!
 //! Dokumentaatio: https://www.polar.com/accesslink-api/
-//! Spec: `docs/reference/polar-accesslink-swagger.yaml`
+//! OpenAPI-kuvaus (swagger): https://www.polar.com/accesslink-api/#polar-accesslink-api
 //!
 //! Rakenne:
 //! - [`oauth`]  valtuutus-URL ja koodin vaihto access tokeniin

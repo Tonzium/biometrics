@@ -1,7 +1,7 @@
 //! Polar AccessLink v3:n vastausrakenteet.
 //!
-//! Kenttänimet ja tyypit on tarkistettu `docs/reference/polar-accesslink-swagger.yaml`
-//! -tiedostosta. Lähes kaikki kentät ovat `Option`, koska Polar jättää
+//! Kenttänimet ja tyypit on tarkistettu Polarin julkisesta OpenAPI-kuvauksesta
+//! (https://www.polar.com/accesslink-api/). Lähes kaikki kentät ovat `Option`, koska Polar jättää
 //! puuttuvat arvot pois vastauksesta (esim. `distance` sisäharjoituksissa).
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};

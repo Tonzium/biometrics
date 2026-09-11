@@ -1,6 +1,6 @@
 # Julkaisuohje: biometrics.tonikiuru.com
 
-Kohde: kotipalvelimen Proxmox-kontti `pve2` (192.168.68.45). Sovellus ajetaan Docker Composella
+Kohde: kotipalvelimen Proxmox-kontti `pve2`. Sovellus ajetaan Docker Composella
 ja julkaistaan internetiin Cloudflare Tunnelilla. Palvelimelle ei avata yhtään porttia, TLS
 päätetään Cloudflaressa ja tunneli on salattu.
 
@@ -24,7 +24,7 @@ Ohje on kirjoitettu Debian 12/13 -pohjaiselle LXC-kontille. Ubuntu toimii samoin
 
 ## 1. Docker palvelimelle
 
-Kirjaudu konttiin (`pct enter <id>` Proxmoxin konsolista tai `ssh root@192.168.68.45`).
+Kirjaudu konttiin (`pct enter <id>` Proxmoxin konsolista tai `ssh root@<pve2:n LAN-osoite>`).
 
 ```bash
 apt-get update && apt-get install -y ca-certificates curl git

@@ -190,7 +190,7 @@ Virheet palautetaan yhtenäisenä JSON-muotona `{ "error": { "code": "...", "mes
 
 ## 7. Julkaisu
 
-Tuotanto ajetaan kotipalvelimen Proxmox-kontissa `pve2` (192.168.68.45), johon asennetaan Docker ja Docker Compose. Domain `tonikiuru.com` on Cloudflaren DNS:ssä.
+Tuotanto ajetaan kotipalvelimen Proxmox-kontissa `pve2`, johon asennetaan Docker ja Docker Compose. Domain `tonikiuru.com` on Cloudflaren DNS:ssä.
 
 `docker-compose.yml` (tuotanto):
 
@@ -255,7 +255,7 @@ Laajennukset, jos aikaa jää: Polar-webhookit (`POST /v3/webhooks`, mahdollista
 
 ## 11. Päätetyt reunaehdot (10.9.2026)
 
-1. **Tuotantopalvelin:** kotipalvelin, Proxmox-kontti `pve2` (192.168.68.45). Konttiin asennetaan Docker + Compose; cloudflared ajetaan konttina samassa compose-pinossa.
+1. **Tuotantopalvelin:** kotipalvelin, Proxmox-kontti `pve2` (kotiverkossa). Konttiin asennetaan Docker + Compose; cloudflared ajetaan konttina samassa compose-pinossa.
 2. **DNS:** `tonikiuru.com` on jo Cloudflaressa, joten tunnelin public hostname luo CNAME-tietueen suoraan.
 3. **Käyttäjät:** yksi sovelluskäyttäjä. Rekisteröinti suljettu; admin-tunnus luodaan ensimmäisellä käynnistyksellä ympäristömuuttujista. Skeema tukee silti useampaa käyttäjää ja Polar-tiliä.
 4. **Polar-kehittäjätili:** olemassa. Luodaan sinne kaksi asiakasta (dev ja prod) eri redirect URL -osoitteilla.

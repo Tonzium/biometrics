@@ -17,3 +17,8 @@ frontend/coverage/
 .idea/
 .DS_Store
 Thumbs.db
+# Konekohtaiset kehitystyökalun asetukset
+.claude/
+
+# Kolmannen osapuolen referenssidokumentit (ei jaeta repossa)
+docs/reference/
