@@ -53,8 +53,12 @@ jobs:
         env:
           SQLX_OFFLINE: "true"
 
+      # Makrot käännetään offline-datalla myös täällä: palvelukanta on tyhjä (ei migraatioita).
+      # #[sqlx::test] luo ajon aikana väliaikaiset kannat DATABASE_URL:iin ja ajaa migraatiot itse.
       - name: Tests
         run: cargo test --locked
+        env:
+          SQLX_OFFLINE: "true"
 
   frontend:
     name: Frontend (TypeScript)
