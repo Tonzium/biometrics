@@ -4,7 +4,7 @@ Full stack -web-sovellus, joka hakee omat harjoitus-, uni-, palautumis- ja aktii
 Polar Flow -kellosta (Polar AccessLink API), tallentaa ne pysyvästi PostgreSQL-kantaan ja
 näyttää ne React-käyttöliittymässä. KAMK:n Web-sovelluskehitys-kurssin lopputyö.
 
-Suunnitelma ja arkkitehtuuri: [docs/SUUNNITELMA.md](docs/SUUNNITELMA.md)
+Suunnitelma ja arkkitehtuuri: [docs/SUUNNITELMA.md](docs/SUUNNITELMA.md) · Julkaisuohje: [docs/JULKAISU.md](docs/JULKAISU.md)
 
 ## Pino
 

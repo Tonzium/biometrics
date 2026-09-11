@@ -200,7 +200,7 @@ Tuotanto ajetaan kotipalvelimen Proxmox-kontissa `pve2` (192.168.68.45), johon a
 | `web` | oma build (node:24 → nginx:alpine) | ei julkaistu | staattinen build + `/api` proxy |
 | `cloudflared` | cloudflare/cloudflared | ei julkaistu | `tunnel run`, token `.env`:stä; ingress (`biometrics.tonikiuru.com` → `http://web:80`) määritellään Cloudflaren hallintapaneelissa, joten erillistä config.yml:ää ei tarvita |
 
-Askeleet:
+Tarkka ohje: `docs/JULKAISU.md`. Askeleet lyhyesti:
 
 1. Cloudflare Zero Trust → Networks → Tunnels → luo tunneli, kopioi token.
 2. Tunnelin public hostname `biometrics.tonikiuru.com` → `http://web:80`. Cloudflare luo CNAME-tietueen automaattisesti.
@@ -229,7 +229,7 @@ Salaisuudet (`.env`, ei koskaan gitiin): `DATABASE_URL`, `JWT_SECRET`, `APP_ENCR
 | 5. Data-API ✅ 10.9.2026 | julkiset lukureitit (exercises sivutettuna + laji/aikasuodatin, sleep, recharge, activity, cardio-load, physical), summary overview/daily/weekly, `PUBLIC_READ`-lippu ja `ReadAccess`-ekstraktori, `/api/meta`, OpenAPI `/api/openapi.json` + Swagger UI `/api/docs` | 8 uutta integraatiotestiä; tyypit generoituvat frontendiin (`npm run gen:api`) |
 | 6. Frontend ✅ 10.9.2026 | Vite 8 + React 19 + TS: yleiskuva, harjoitukset (suodatus, sivutus, yksityiskohdat sykevyöhykkeineen), uni ja palautuminen, aktiivisuus ja kuormitus, kirjautuminen, asetukset (Polar-yhdistys, synkronointi, ajoloki); Recharts-kaaviot; generoidut API-tyypit; nginx.conf + Dockerfile | koko käyttöpolku katselmoitu selaimessa demo-datalla; 12 Vitest-testiä |
 | 7. Testit + CI ✅ 11.9.2026 | 59 backend-testiä (yksikkö + `#[sqlx::test]`-integraatio mock-Polaria vasten), 12 frontend-testiä; GitHub Actions: rust (fmt, clippy offline, testit Postgres-palvelukontilla), node (typecheck, lint, test, build), docker (molemmat imaget + compose-validointi); backendin monivaiheinen Dockerfile; `docker-compose.local.yml` tuotantopinon koeajoon ilman tunnelia | CI vihreä ensimmäisellä pushilla; pino ajettu paikallisesti konteissa |
-| 8. Julkaisu | Dockerfilet, compose, nginx, cloudflared, DNS | https://biometrics.tonikiuru.com toimii |
+| 8. Julkaisu 🔄 | Dockerfilet ja compose valmiit ja koeajettu; `docs/JULKAISU.md` askel askeleelta (LXC nesting, Docker, .env, Cloudflare Tunnel, Access), `deploy/deploy.sh` päivitykseen, `deploy/backup.sh` pg_dump-varmuuskopioon. Palvelinaskeleet ja Cloudflare-asetukset tekee Toni (vaativat pääsyn pve2:een ja Cloudflare-tiliin) | https://biometrics.tonikiuru.com toimii |
 | 9. Dokumentointi | README, ARKKITEHTUURI.md, kurssiraportti | |
 
 Laajennukset, jos aikaa jää: Polar-webhookit (`POST /v3/webhooks`, mahdollista koska julkinen osoite on olemassa), jatkuva syke `GET /v3/users/continuous-heart-rate/{date}`, harjoituksen FIT/GPX-lataus ja reittikartta, PWA-asennettavuus.

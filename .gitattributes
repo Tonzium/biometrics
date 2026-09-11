@@ -1,0 +1,5 @@
+# Shell-skriptit ajetaan Linux-palvelimella: aina LF, vaikka Windowsissa autocrlf olisi päällä.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.sql text eol=lf
