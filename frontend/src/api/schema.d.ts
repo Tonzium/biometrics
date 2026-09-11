@@ -167,7 +167,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Fyysisten tietojen aikasarja (paino, VO2max, leposyke) vanhimmasta uusimpaan. */
+        /**
+         * Fyysisten tietojen aikasarja (paino, VO2max, leposyke) vanhimmasta uusimpaan.
+         *     Paino ja pituus ovat `null` kirjautumattomille, ellei `PUBLIC_BODY_METRICS=true`.
+         */
         get: operations["list_physical"];
         put?: never;
         post?: never;
@@ -552,6 +555,8 @@ export interface components {
         Meta: {
             /** @description Onko Polar-tunnukset asetettu palvelimelle. */
             polar_configured: boolean;
+            /** @description Näytetäänkö paino ja pituus kirjautumattomille. */
+            public_body_metrics: boolean;
             /** @description Saako dataa lukea ilman kirjautumista. */
             public_read: boolean;
             version: string;
@@ -582,6 +587,11 @@ export interface components {
         Overview: {
             /** Format: int64 */
             activity_days: number;
+            /**
+             * @description `true`, jos paino ja pituus on piilotettu tästä vastauksesta
+             *     (kirjautumaton katselija ja `PUBLIC_BODY_METRICS=false`).
+             */
+            body_metrics_hidden: boolean;
             /** Format: int64 */
             exercises: number;
             /**

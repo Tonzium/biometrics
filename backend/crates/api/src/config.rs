@@ -23,6 +23,9 @@ pub struct Config {
     /// Saako dataa lukea ilman kirjautumista (näyteikkuna). `false` = kaikki
     /// reitit vaativat istunnon.
     pub public_read: bool,
+    /// Näytetäänkö paino ja pituus myös kirjautumattomille. Oletus `false`:
+    /// julkisessa näyteikkunassa ne piilotetaan.
+    pub public_body_metrics: bool,
 
     /// Ajastetun synkronoinnin väli tunteina; 0 = vain manuaalinen.
     pub sync_interval_hours: u64,
@@ -73,6 +76,7 @@ impl Config {
         };
 
         let public_read = optional_parsed("PUBLIC_READ", true)?;
+        let public_body_metrics = optional_parsed("PUBLIC_BODY_METRICS", false)?;
         let sync_interval_hours = optional_parsed("SYNC_INTERVAL_HOURS", 6)?;
 
         let admin_email = optional("ADMIN_EMAIL").map(|e| e.to_lowercase());
@@ -86,6 +90,7 @@ impl Config {
             cookie_secure,
             encryption_key,
             public_read,
+            public_body_metrics,
             sync_interval_hours,
             polar,
             admin_email,
@@ -103,6 +108,7 @@ impl Config {
             cookie_secure: false,
             encryption_key: [7u8; 32],
             public_read: true,
+            public_body_metrics: false,
             sync_interval_hours: 0,
             polar: None,
             admin_email: None,

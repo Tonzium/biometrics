@@ -162,7 +162,7 @@ Kaikki reitit `/api`-etuliitteellä. **Lukureitit ovat julkisia** (näyteikkuna;
 | GET | `/api/summary/weekly?weeks=12` | Julkinen: näkymä `v_weekly_summary` |
 | GET | `/api/openapi.json`, `/api/docs` | OpenAPI 3 -kuvaus ja Swagger UI |
 
-Julkisista vastauksista on jätetty pois Polar-käyttäjä-id, laite-id:t, tilien id:t ja raaka JSON.
+Julkisista vastauksista on jätetty pois Polar-käyttäjä-id, laite-id:t, tilien id:t ja raaka JSON. Paino ja pituus näkyvät vain kirjautuneille, ellei `PUBLIC_BODY_METRICS=true`.
 
 Virheet palautetaan yhtenäisenä JSON-muotona `{ "error": { "code": "...", "message": "..." } }` ja oikeilla HTTP-koodeilla (400, 401, 404, 409, 429, 500). Polarin 429-vastaukset käsitellään `RateLimit-Reset`-otsakkeen mukaan.
 
@@ -230,7 +230,7 @@ Salaisuudet (`.env`, ei koskaan gitiin): `DATABASE_URL`, `JWT_SECRET`, `APP_ENCR
 | 5. Data-API ✅ 10.9.2026 | julkiset lukureitit (exercises sivutettuna + laji/aikasuodatin, sleep, recharge, activity, cardio-load, physical), summary overview/daily/weekly, `PUBLIC_READ`-lippu ja `ReadAccess`-ekstraktori, `/api/meta`, OpenAPI `/api/openapi.json` + Swagger UI `/api/docs` | 8 uutta integraatiotestiä; tyypit generoituvat frontendiin (`npm run gen:api`) |
 | 6. Frontend ✅ 10.9.2026 | Vite 8 + React 19 + TS: yleiskuva, harjoitukset (suodatus, sivutus, yksityiskohdat sykevyöhykkeineen), uni ja palautuminen, aktiivisuus ja kuormitus, kirjautuminen, asetukset (Polar-yhdistys, synkronointi, ajoloki); Recharts-kaaviot; generoidut API-tyypit; nginx.conf + Dockerfile | koko käyttöpolku katselmoitu selaimessa demo-datalla; 12 Vitest-testiä |
 | 7. Testit + CI ✅ 11.9.2026 | 59 backend-testiä (yksikkö + `#[sqlx::test]`-integraatio mock-Polaria vasten), 12 frontend-testiä; GitHub Actions: rust (fmt, clippy offline, testit Postgres-palvelukontilla), node (typecheck, lint, test, build), docker (molemmat imaget + compose-validointi); backendin monivaiheinen Dockerfile; `docker-compose.local.yml` tuotantopinon koeajoon ilman tunnelia | CI vihreä GitHubissa 11.9.2026 (kaksi korjausta: testivaihe tarvitsi `SQLX_OFFLINE`, compose-validointi `.env`-tiedoston); pino ajettu paikallisesti konteissa |
-| 8. Julkaisu 🔄 | Dockerfilet ja compose valmiit ja koeajettu; `docs/JULKAISU.md` askel askeleelta (LXC nesting, Docker, .env, Cloudflare Tunnel, Access), `deploy/deploy.sh` päivitykseen, `deploy/backup.sh` pg_dump-varmuuskopioon. Palvelinaskeleet ja Cloudflare-asetukset tekee Toni (vaativat pääsyn pve2:een ja Cloudflare-tiliin) | https://biometrics.tonikiuru.com toimii |
+| 8. Julkaisu ✅ 11.9.2026 | LXC-kontti pve2:lla, Docker, imaget GHCR:stä, Cloudflare Tunnel; `docs/JULKAISU.md`, `deploy/deploy.sh`, `deploy/backup.sh`. Julkaisussa löytyi kaksi ohjevirhettä (Postgres-salasanan base64-merkit rikkoivat yhteysosoitteen → hex; admin-salasanan vähimmäispituus) ja ne korjattiin ohjeeseen | https://biometrics.tonikiuru.com vastaa; Polar-tunnukset ja ensimmäinen synkronointi seuraavaksi |
 | 9. Dokumentointi ✅ 11.9.2026 | README, `ARKKITEHTUURI.md` (rakenne, virrat, tietoturva, 9 ADR:ää, testausstrategia), `JULKAISU.md`, `RAPORTTI.md` (kurssin aiheet → toteutus, AI-käytön kriittinen arviointi; omat pohdinnat merkitty `[TÄYDENNÄ]`) | |
 
 Laajennukset, jos aikaa jää: Polar-webhookit (`POST /v3/webhooks`, mahdollista koska julkinen osoite on olemassa), jatkuva syke `GET /v3/users/continuous-heart-rate/{date}`, harjoituksen FIT/GPX-lataus ja reittikartta, PWA-asennettavuus.

@@ -236,7 +236,11 @@ async fn ranged_lists_default_to_30_days_and_validate(pool: PgPool) {
     assert_eq!(cardio[0]["status"], "PRODUCTIVE");
 
     let physical = common::body_json(common::get(&app, "/api/physical").await).await;
-    assert_eq!(physical[0]["weight_kg"], 79.5);
+    assert!(
+        physical[0]["weight_kg"].is_null(),
+        "anonymous must not see weight"
+    );
+    assert_eq!(physical[0]["resting_heart_rate"], 47);
 }
 
 #[sqlx::test(migrator = "api::MIGRATOR")]
@@ -258,7 +262,11 @@ async fn summaries_reflect_seeded_data(pool: PgPool) {
     assert_eq!(overview["latest"]["sleep_score"], 70);
     assert_eq!(overview["latest"]["sleep_total_s"], 23000);
     assert_eq!(overview["latest"]["steps"], 8000);
-    assert_eq!(overview["latest"]["weight_kg"], 79.5);
+    assert!(
+        overview["latest"]["weight_kg"].is_null(),
+        "anonymous must not see weight"
+    );
+    assert_eq!(overview["body_metrics_hidden"], true);
     assert_eq!(overview["latest"]["cardio_load_status"], "PRODUCTIVE");
 
     let daily = common::body_json(common::get(&app, "/api/summary/daily").await).await;
@@ -284,6 +292,48 @@ async fn summaries_reflect_seeded_data(pool: PgPool) {
         .map(|w| w["total_duration_s"].as_i64().unwrap())
         .sum();
     assert_eq!(total_dur, 3000 + 7200 + 1800);
+}
+
+#[sqlx::test(migrator = "api::MIGRATOR")]
+async fn body_metrics_hidden_from_anonymous_by_default(pool: PgPool) {
+    seed(&pool).await;
+    let app = common::test_app(pool);
+
+    // Kirjautumaton: paino piilotettu, muut arvot näkyvät
+    let overview = common::body_json(common::get(&app, "/api/summary/overview").await).await;
+    assert_eq!(overview["body_metrics_hidden"], true);
+    assert!(overview["latest"]["weight_kg"].is_null());
+    assert_eq!(overview["latest"]["vo2_max"], 51);
+    let physical = common::body_json(common::get(&app, "/api/physical").await).await;
+    assert!(physical[0]["weight_kg"].is_null());
+    assert!(physical[0]["height_cm"].is_null());
+    assert_eq!(physical[0]["resting_heart_rate"], 47);
+
+    // Kirjautunut näkee painon
+    let session = login(&app).await;
+    let overview =
+        common::body_json(common::get_with_cookie(&app, "/api/summary/overview", &session).await)
+            .await;
+    assert_eq!(overview["body_metrics_hidden"], false);
+    assert_eq!(overview["latest"]["weight_kg"], 79.5);
+    let physical =
+        common::body_json(common::get_with_cookie(&app, "/api/physical", &session).await).await;
+    assert_eq!(physical[0]["weight_kg"], 79.5);
+}
+
+#[sqlx::test(migrator = "api::MIGRATOR")]
+async fn body_metrics_public_when_enabled(pool: PgPool) {
+    seed(&pool).await;
+    let config = api::Config {
+        public_body_metrics: true,
+        ..api::Config::for_tests()
+    };
+    let app = common::test_app_with(config, pool);
+    let overview = common::body_json(common::get(&app, "/api/summary/overview").await).await;
+    assert_eq!(overview["body_metrics_hidden"], false);
+    assert_eq!(overview["latest"]["weight_kg"], 79.5);
+    let meta = common::body_json(common::get(&app, "/api/meta").await).await;
+    assert_eq!(meta["public_body_metrics"], true);
 }
 
 #[sqlx::test(migrator = "api::MIGRATOR")]

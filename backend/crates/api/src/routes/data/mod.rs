@@ -56,6 +56,11 @@ pub struct Paged<T> {
 
 pub const MAX_RANGE_DAYS: i64 = 366;
 
+/// Piilotetaanko paino ja pituus tältä katselijalta.
+pub fn hide_body_metrics(state: &crate::state::AppState, read: &crate::auth::ReadAccess) -> bool {
+    !read.is_authenticated() && !state.config.public_body_metrics
+}
+
 /// Tili, jonka dataa julkiset reitit näyttävät. `None` = ei vielä yhdistetty.
 pub async fn primary_account(pool: &PgPool) -> ApiResult<Option<Uuid>> {
     Ok(db::polar_accounts::first(pool).await?.map(|a| a.id))

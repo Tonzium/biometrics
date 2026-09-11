@@ -417,18 +417,20 @@ pub struct PhysicalInfo {
 }
 
 /// Fyysisten tietojen aikasarja (paino, VO2max, leposyke) vanhimmasta uusimpaan.
+/// Paino ja pituus ovat `null` kirjautumattomille, ellei `PUBLIC_BODY_METRICS=true`.
 #[utoipa::path(
     get, path = "/physical", tag = "data",
     responses((status = 200, body = Vec<PhysicalInfo>))
 )]
 async fn list_physical(
     State(state): State<AppState>,
-    _read: ReadAccess,
+    read: ReadAccess,
 ) -> ApiResult<Json<Vec<PhysicalInfo>>> {
+    let hide_body = super::hide_body_metrics(&state, &read);
     let Some(account) = primary_account(&state.pool).await? else {
         return Ok(Json(vec![]));
     };
-    let rows = sqlx::query_as!(
+    let mut rows = sqlx::query_as!(
         PhysicalInfo,
         r#"SELECT date, modified_at, weight_kg, height_cm, maximum_heart_rate, resting_heart_rate,
                   aerobic_threshold, anaerobic_threshold, vo2_max, weight_source, sleep_goal_s
@@ -437,5 +439,12 @@ async fn list_physical(
     )
     .fetch_all(&state.pool)
     .await?;
+    if hide_body {
+        for row in &mut rows {
+            row.weight_kg = None;
+            row.height_cm = None;
+            row.weight_source = None;
+        }
+    }
     Ok(Json(rows))
 }

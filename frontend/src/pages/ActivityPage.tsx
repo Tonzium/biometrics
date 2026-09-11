@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { useActivity, useCardioLoad, usePhysical } from '../api/hooks'
+import { useActivity, useCardioLoad, useMe, useMeta, usePhysical } from '../api/hooks'
 import { RangePicker } from '../components/RangePicker'
 import { CardioLoadChart, StepsChart } from '../components/charts'
 import { StatCard } from '../components/StatCard'
@@ -13,6 +13,10 @@ export function ActivityPage() {
   const activity = useActivity(range)
   const cardio = useCardioLoad(range)
   const physical = usePhysical()
+  const me = useMe()
+  const meta = useMeta()
+  // Backend palauttaa painon ja pituuden null-arvoina kirjautumattomille; kerrotaan miksi.
+  const bodyHidden = !me.data && meta.data?.public_body_metrics === false
 
   const acts = activity.data ?? []
   const totalSteps = acts.reduce((s, a) => s + (a.steps ?? 0), 0)
@@ -64,7 +68,12 @@ export function ActivityPage() {
           <Empty>Ei fyysisiä tietoja.</Empty>
         ) : (
           <div className="stat-grid">
-            <StatCard label="Paino" value={latestPhysical.weight_kg ? `${latestPhysical.weight_kg.toLocaleString('fi-FI')} kg` : '–'} hint={formatDate(latestPhysical.date)} accent="purple" />
+            <StatCard
+              label="Paino"
+              value={bodyHidden ? 'Piilotettu' : latestPhysical.weight_kg ? `${latestPhysical.weight_kg.toLocaleString('fi-FI')} kg` : '–'}
+              hint={bodyHidden ? 'näkyy vain kirjautuneille' : formatDate(latestPhysical.date)}
+              accent="purple"
+            />
             <StatCard label="VO₂max" value={latestPhysical.vo2_max ? `${latestPhysical.vo2_max} ml/kg/min` : '–'} accent="blue" />
             <StatCard label="Leposyke" value={latestPhysical.resting_heart_rate ? `${latestPhysical.resting_heart_rate} bpm` : '–'} accent="red" />
             <StatCard label="Maksimisyke" value={latestPhysical.maximum_heart_rate ? `${latestPhysical.maximum_heart_rate} bpm` : '–'} accent="orange" />

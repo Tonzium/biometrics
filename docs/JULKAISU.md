@@ -63,7 +63,7 @@ Täytä `deploy/.env` seuraavasti. Salaisuudet generoidaan komennoilla, älä ke
 
 | Muuttuja | Arvo tuotannossa |
 |---|---|
-| `POSTGRES_PASSWORD` | `openssl rand -base64 24` |
+| `POSTGRES_PASSWORD` | `openssl rand -hex 24` (**vain kirjaimia ja numeroita**: salasana upotetaan yhteysosoitteeseen `postgres://polar:<salasana>@db`, ja base64:n `/`, `+` ja `=` rikkovat sen) |
 | `DATABASE_URL` | saa jäädä esimerkkiarvoon; compose ylikirjoittaa sen (`db`-kontti) |
 | `BIND_ADDR` | `0.0.0.0:8080` (compose asettaa tämänkin) |
 | `JWT_SECRET` | `openssl rand -base64 48` |
@@ -71,6 +71,7 @@ Täytä `deploy/.env` seuraavasti. Salaisuudet generoidaan komennoilla, älä ke
 | `COOKIE_SECURE` | `true` (pakollinen HTTPS:n takana; `false` rikkoo kirjautumisen) |
 | `PUBLIC_READ` | `true` (näyteikkuna) tai `false` (kaikki vaatii kirjautumisen) |
 | `SYNC_INTERVAL_HOURS` | `6` |
+| `PUBLIC_BODY_METRICS` | `false` (oletus): paino ja pituus näkyvät vain kirjautuneille. `true` näyttää ne kaikille |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | omistajatunnus; luetaan vain ensimmäisellä käynnistyksellä tyhjään kantaan. Vähintään 12 merkkiä. |
 | `POLAR_CLIENT_ID`, `POLAR_CLIENT_SECRET` | tuotantoasiakkaan tunnukset |
 | `POLAR_REDIRECT_URL` | `https://biometrics.tonikiuru.com/api/polar/callback` |
@@ -185,6 +186,7 @@ Docker käynnistyy bootissa.
 | Yhdistä-nappi antaa 503 | `POLAR_CLIENT_ID`/`SECRET` puuttuvat `.env`:stä. |
 | `api` ei käynnisty: "no users exist and ADMIN_EMAIL…" | Ensimmäinen käynnistys ilman admin-muuttujia. Lisää ne ja käynnistä uudelleen. |
 | `api` ei käynnisty: "APP_ENCRYPTION_KEY must decode to exactly 32 bytes" | Generoi avain komennolla `openssl rand -base64 32`. |
+| `api` ei käynnisty: "connecting to PostgreSQL … invalid port number" | `POSTGRES_PASSWORD` sisältää `/`, `+` tai `=`. Generoi uusi komennolla `openssl rand -hex 24`. Jos kanta ehti alustua vanhalla salasanalla eikä dataa vielä ole: `docker compose -f deploy/docker-compose.yml down -v` ja `up -d`. |
 | Synkronointi on `failed` ja virhe mainitsee 429 | Polarin rate limit. Odota `RateLimit-Reset`-ajan verran; ajastin yrittää uudelleen. |
 | `pull` antaa `denied` tai `unauthorized` | Repo on yksityinen: `docker login ghcr.io` (kohta 4) tai tee paketit julkisiksi GitHubissa (Packages → package → Settings → Change visibility). |
 | `pull` antaa `manifest unknown` | CI ei ole vielä julkaissut imagea tälle tagille: tarkista Actions-välilehti ja `IMAGE_PREFIX`/`IMAGE_TAG`. |

@@ -113,7 +113,7 @@ Yksittäinen jäsentymätön alkio ohitetaan varoituksella eikä kaada erää.
 | SQL-injektio | kaikki kyselyt parametrisoituja `sqlx::query!`-makroja; ainoa dynaaminen SQL on testeissä ja merkitty `AssertSqlSafe` |
 | Salaisuudet | vain `.env`-tiedostossa (git-ignoroitu, `chmod 600`); ei koodissa, ei imageissa, ei lokeissa |
 | Roolit | `owner` saa yhdistää ja synkronoida; `viewer` vain lukee. Rekisteröintiä ei ole. |
-| Julkinen data | vastauksista poistettu Polar-käyttäjä-id, laite-id:t, tilien id:t, raaka JSON. GPS-reittejä ei tuoda kantaan. |
+| Julkinen data | vastauksista poistettu Polar-käyttäjä-id, laite-id:t, tilien id:t, raaka JSON. GPS-reittejä ei tuoda kantaan. Paino ja pituus näytetään vain kirjautuneille (`PUBLIC_BODY_METRICS=false`, oletus); backend palauttaa ne `null`-arvoina, joten data ei lähde palvelimelta. |
 | Verkko | ei avoimia portteja; TLS Cloudflaressa; kontit ajetaan ei-root-käyttäjänä |
 | Rajoitus | `PUBLIC_READ=false` tai Cloudflare Access sulkee sivuston kirjautumisen taakse |
 

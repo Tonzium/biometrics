@@ -47,6 +47,9 @@ pub struct Latest {
 pub struct Overview {
     /// Onko Polar-tili yhdistetty ja dataa odotettavissa.
     pub polar_connected: bool,
+    /// `true`, jos paino ja pituus on piilotettu tästä vastauksesta
+    /// (kirjautumaton katselija ja `PUBLIC_BODY_METRICS=false`).
+    pub body_metrics_hidden: bool,
     pub last_sync_at: Option<DateTime<Utc>>,
     pub exercises: i64,
     pub sleep_nights: i64,
@@ -62,10 +65,12 @@ pub struct Overview {
 /// Dashboardin yleiskuva: määrät, aikaväli, lajit ja tuoreimmat arvot.
 #[utoipa::path(get, path = "/summary/overview", tag = "summary",
     responses((status = 200, body = Overview)))]
-async fn overview(State(state): State<AppState>, _read: ReadAccess) -> ApiResult<Json<Overview>> {
+async fn overview(State(state): State<AppState>, read: ReadAccess) -> ApiResult<Json<Overview>> {
+    let hide_body = super::hide_body_metrics(&state, &read);
     let Some(account_rec) = db::polar_accounts::first(&state.pool).await? else {
         return Ok(Json(Overview {
             polar_connected: false,
+            body_metrics_hidden: hide_body,
             last_sync_at: None,
             exercises: 0,
             sleep_nights: 0,
@@ -137,6 +142,7 @@ async fn overview(State(state): State<AppState>, _read: ReadAccess) -> ApiResult
 
     Ok(Json(Overview {
         polar_connected: true,
+        body_metrics_hidden: hide_body,
         last_sync_at: account_rec.last_sync_at,
         exercises: totals.exercises,
         sleep_nights: totals.sleep_nights,
@@ -152,7 +158,11 @@ async fn overview(State(state): State<AppState>, _read: ReadAccess) -> ApiResult
             nightly_recharge_status: recharge.as_ref().and_then(|r| r.nightly_recharge_status),
             activity_date: activity.as_ref().map(|a| a.date),
             steps: activity.as_ref().and_then(|a| a.steps),
-            weight_kg: physical.as_ref().and_then(|p| p.weight_kg),
+            weight_kg: if hide_body {
+                None
+            } else {
+                physical.as_ref().and_then(|p| p.weight_kg)
+            },
             vo2_max: physical.as_ref().and_then(|p| p.vo2_max),
             resting_heart_rate: physical.as_ref().and_then(|p| p.resting_heart_rate),
             cardio_load_status: cardio,

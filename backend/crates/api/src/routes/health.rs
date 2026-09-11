@@ -48,6 +48,8 @@ pub struct Meta {
     public_read: bool,
     /// Onko Polar-tunnukset asetettu palvelimelle.
     polar_configured: bool,
+    /// Näytetäänkö paino ja pituus kirjautumattomille.
+    public_body_metrics: bool,
     version: &'static str,
 }
 
@@ -57,6 +59,7 @@ async fn meta(State(state): State<AppState>) -> Json<Meta> {
     Json(Meta {
         public_read: state.config.public_read,
         polar_configured: state.polar.is_some(),
+        public_body_metrics: state.config.public_body_metrics,
         version: env!("CARGO_PKG_VERSION"),
     })
 }

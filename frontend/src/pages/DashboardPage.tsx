@@ -73,7 +73,12 @@ export function DashboardPage() {
           accent="orange"
         />
         <StatCard label="Harjoituskuorma" value={cardioStatusLabel(l.cardio_load_status)} accent="red" />
-        <StatCard label="Paino" value={l.weight_kg ? `${l.weight_kg.toLocaleString('fi-FI')} kg` : '–'} accent="purple" />
+        <StatCard
+          label="Paino"
+          value={o.body_metrics_hidden ? 'Piilotettu' : l.weight_kg ? `${l.weight_kg.toLocaleString('fi-FI')} kg` : '–'}
+          hint={o.body_metrics_hidden ? 'näkyy vain kirjautuneille' : undefined}
+          accent="purple"
+        />
         <StatCard
           label="VO₂max / leposyke"
           value={`${l.vo2_max ?? '–'} / ${l.resting_heart_rate ?? '–'}`}

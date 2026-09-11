@@ -56,8 +56,20 @@ impl FromRequestParts<AppState> for CurrentUser {
 
 /// Lukuoikeus dataan. Jos `PUBLIC_READ=true` (oletus, näyteikkuna), kuka
 /// tahansa saa lukea; muuten vaaditaan kirjautunut käyttäjä.
-#[derive(Debug, Clone, Copy)]
-pub struct ReadAccess;
+///
+/// `user` on `Some`, jos pyynnössä oli kelvollinen istunto, myös julkisessa
+/// tilassa. Reitit käyttävät sitä päättääkseen, mitkä kentät näytetään
+/// (esim. paino vain kirjautuneille).
+#[derive(Debug, Clone)]
+pub struct ReadAccess {
+    pub user: Option<CurrentUser>,
+}
+
+impl ReadAccess {
+    pub fn is_authenticated(&self) -> bool {
+        self.user.is_some()
+    }
+}
 
 impl FromRequestParts<AppState> for ReadAccess {
     type Rejection = ApiError;
@@ -66,11 +78,11 @@ impl FromRequestParts<AppState> for ReadAccess {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        if state.config.public_read {
-            return Ok(Self);
+        let user = CurrentUser::from_request_parts(parts, state).await;
+        match user {
+            Ok(user) => Ok(Self { user: Some(user) }),
+            Err(_) if state.config.public_read => Ok(Self { user: None }),
+            Err(e) => Err(e),
         }
-        CurrentUser::from_request_parts(parts, state)
-            .await
-            .map(|_| Self)
     }
 }
