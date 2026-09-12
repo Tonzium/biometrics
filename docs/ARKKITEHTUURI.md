@@ -21,7 +21,7 @@ lähtevä tunneli ja api-kontin lähtevät HTTPS-kutsut Polariin.
 | Kerros | Toteutus | Vastuu |
 |---|---|---|
 | Frontend | React 19, TypeScript 5.9, Vite 8, TanStack Query, react-router, Recharts | Näkymät, tilanhallinta, kaaviot. Ei liiketoimintalogiikkaa. |
-| Reverse proxy | nginx:alpine | Staattinen build, `/api` backendille, gzip, välimuistiotsakkeet, SPA-fallback |
+| Reverse proxy | nginx-unprivileged:alpine | Staattinen build, `/api` backendille, gzip, välimuistiotsakkeet, SPA-fallback |
 | Backend | Rust 1.98, axum 0.8, sqlx 0.9, reqwest 0.13, utoipa | REST-rajapinta, autentikointi, Polar-integraatio, synkronointi, OpenAPI |
 | Tietokanta | PostgreSQL 18 | Pysyvä tallennus, näkymät yhteenvetoja varten |
 | Julkaisu | Docker Compose, GitHub Actions, GHCR, Cloudflare Tunnel | Buildit CI:ssä, palvelin vetää imaget, TLS Cloudflaressa |
@@ -137,11 +137,11 @@ alkion katkaistuna, jotta jäsennysvirheen syy näkyy lokista ilman arvailua.
 Katselmoinnin löydökset, tehdyt korjaukset ja avoimet kohdat: [TIETOTURVA.md](TIETOTURVA.md).
 
 Tietoisesti tekemättä: refresh-tokenit (7 vrk istunto riittää yhdelle käyttäjälle),
-Polar-webhookit (ajastin riittää), täysin ei-root nginx (`nginx-unprivileged` kuuntelisi porttia
-8080, mikä vaatisi muutoksen myös Cloudflaren tunnelin kohteeseen) ja oma ei-superuser-rooli
-kannassa (kyselyt ovat kaikki parametrisoituja, joten tämä olisi vain syvyyssuuntaista suojaa).
-Cloudflaren päässä tehtäväksi jää "Always Use HTTPS" ja halutessa rate limiting -sääntö, joka
-pysäyttää tulvan jo ennen originia.
+Polar-webhookit (ajastin riittää) ja erillinen migraatiorooli kannassa (sovellus ajaa migraatiot
+itse käynnistyessään, joten se tarvitsisi kaksi yhteysosoitetta). nginx ajaa kokonaan
+ei-root-käyttäjänä, ja sovelluksella on kannassa oma ei-superuser-rooli. Cloudflaren päässä
+"Always Use HTTPS" on päällä; halutessa sinne voi lisätä vielä rate limiting -säännön, joka
+pysäyttää tulvan ennen originia.
 
 ## 6. Päätökset (ADR)
 

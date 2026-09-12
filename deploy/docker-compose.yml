@@ -120,20 +120,34 @@ services:
     image: ${IMAGE_PREFIX:-ghcr.io/tonzium/biometrics}-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     logging: *logging
-    # nginx-image käynnistyy rootina, pudottaa työprosessit nginx-käyttäjälle ja
-    # kuuntelee porttia 80, joten se tarvitsee näistä neljä kyvykkyyttä; loput
-    # pudotetaan. Täysin ei-root nginx vaatisi nginx-unprivileged-imagen ja
-    # portin 8080, mikä tarkoittaisi muutosta myös Cloudflaren tunneliin
-    # (public hostname osoittaa nyt kohteeseen web:80).
+    # web käyttää nginx-unprivileged-imagea, jossa myös nginxin pääprosessi ajaa
+    # uid 101:llä. Siksi se ei tarvitse yhtään kyvykkyyttä. Tässä oli ennen
+    # CHOWN, SETGID ja SETUID (rootina käynnistyvä nginx pudottaa työprosessit
+    # nginx-käyttäjälle) sekä NET_BIND_SERVICE portin 80 varaamiseen.
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    cap_add:
-      - CHOWN
-      - SETGID
-      - SETUID
-      - NET_BIND_SERVICE
+    # Portti pysyy 80:ssä, jotta Cloudflaren tunnelin kohde (web:80) ei vaadi
+    # käsin tehtävää muutosta eikä sivusto käy alhaalla. Ei-root-prosessi saa
+    # varata alle 1024:n portin vain, jos tätä rajaa lasketaan. Asetus koskee
+    # VAIN tämän kontin omaa verkkonimiavaruutta, jossa ei aja mitään muuta kuin
+    # nginx, joten se ei anna hyökkääjälle uutta kykyä: portin varaaminen omassa
+    # nimiavaruudessa ei johda mihinkään.
+    #
+    # Mitattu: NET_BIND_SERVICE ei korvaa tätä. Docker ei aseta
+    # ambient-kyvykkyyksiä, joten kyvykkyys ei välity ei-root-prosessille, ja
+    # pelkällä cap_add:lla nginx kaatuu virheeseen "bind() to 0.0.0.0:80 failed
+    # (13: Permission denied)". Huomaa myös, että Docker Desktop (WSL2) laskee
+    # tämän rajan nollaan valmiiksi, tavallinen Linux-palvelin ei: ilman tätä
+    # riviä pino toimisi kehityskoneella ja kaatuisi palvelimella.
+    #
+    # Jos jokin isäntä ei hyväksy tätä sysctlia, vaihtoehto on vaihtaa
+    # frontend/nginx.conf:n `listen 80` -> `listen 8080` (ja
+    # docker-compose.local.yml:n 8088:80 -> 8088:8080) sekä tunnelin kohde
+    # web:8080:aan.
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: "0"
     depends_on:
       api:
         condition: service_healthy

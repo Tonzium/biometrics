@@ -216,20 +216,19 @@ tilanteessa. Tarkistusvaihe kaatuu oikein, kun muuttuja poistetaan listalta.
 **Ongelma.** Yksikään kontti ei rajoittanut Linux-kyvykkyyksiä eikä estänyt oikeuksien
 korottamista setuid-binäärillä. Kontista karannut prosessi olisi saanut koko oletuskyvykkyysjoukon.
 
-**Korjaus.** Kaikilla palveluilla on `no-new-privileges`. api ja cloudflared pudottavat kaikki
-kyvykkyydet (`cap_drop: ALL`); api ajaa jo ei-root-käyttäjänä ja kuuntelee porttia 8080, joten se
-ei tarvitse yhtään. web pudottaa kaikki paitsi neljä, jotka nginx tarvitsee käynnistyessään
-(`CHOWN`, `SETGID`, `SETUID`, `NET_BIND_SERVICE`). db:n kyvykkyyksiä ei karsita, koska
-postgres-image tarvitsee niitä datahakemiston omistajan vaihtoon.
+**Korjaus.** Kaikilla palveluilla on `no-new-privileges`. api, web ja cloudflared pudottavat
+kaikki kyvykkyydet (`cap_drop: ALL`) eivätkä ota yhtään takaisin: api ajaa ei-root-käyttäjänä
+(uid 10001) ja kuuntelee porttia 8080, ja web vaihtui nginx-unprivileged-imageen (ks. alla). db:n
+kyvykkyyksiä ei karsita, koska postgres-image tarvitsee niitä datahakemiston omistajan vaihtoon.
 
 | Tiedosto | Mitä muuttui |
 |---|---|
-| `deploy/docker-compose.yml` | `security_opt` kaikille, `cap_drop`/`cap_add` api:lle, web:lle ja cloudflaredille |
+| `deploy/docker-compose.yml` | `security_opt` kaikille ja `cap_drop: ALL` api:lle, web:lle ja cloudflaredille |
 
-**Todennus.** `docker inspect` ajossa olevista konteista: api `CapDrop=[ALL]`, `CapAdd=[]`,
-käyttäjä `app` (uid 10001); web `CapDrop=[ALL]` ja vain ne neljä lisättyä; molemmilla
-`no-new-privileges:true`. nginxin työprosessit ajavat `nginx`-käyttäjänä (pääprosessi on rootina,
-ks. alla). Koko pino käynnistyi terveeksi näillä rajoituksilla.
+**Todennus.** `docker inspect` ajossa olevista konteista: api ja web molemmat `CapDrop=[ALL]`,
+`CapAdd=[]` ja `no-new-privileges:true`; api:n käyttäjä on `app` (uid 10001) ja web:n `nginx`
+(uid 101). Kumpikaan ei aja yhtään prosessia rootina. Koko pino käynnistyi terveeksi näillä
+rajoituksilla.
 
 ### Kannan sovellusrooli
 
@@ -285,11 +284,65 @@ funktiota jätetään koskematta (`pg_depend.deptype = 'e'`).
 migraatioiden hinta. Suoja kohdistuu nimenomaan SQL:stä käyttöjärjestelmään johtavaan tiehen ja
 muiden roolien koskemiseen.
 
-**Tietoisesti tekemättä.** Täysin ei-root nginx vaatisi `nginx-unprivileged`-imagen, joka
-kuuntelee porttia 8080. Se tarkoittaisi muutosta myös Cloudflaren tunnelin public hostname
--kohteeseen (nyt `web:80`), eli sivusto olisi alhaalla kunnes asetus on päivitetty käsin. Myöskään
-erillistä migraatioroolia ei tehty: sovellus ajaa migraatiot itse käynnistyessään, joten se
-tarvitsisi kaksi yhteysosoitetta.
+### Täysin ei-root nginx
+
+**Ongelma.** nginxin pääprosessi ajoi rootina. Se on nginxin normaali toimintatapa — pääprosessi
+varaa portin 80 ja pudottaa työprosessit `nginx`-käyttäjälle — mutta se tarkoittaa, että kontissa
+on jatkuvasti root-prosessi, joka käsittelee verkosta tulevaa liikennettä. Sitä varten kontti
+tarvitsi neljä kyvykkyyttä: `CHOWN`, `SETGID` ja `SETUID` käyttäjän vaihtoon ja `NET_BIND_SERVICE`
+portin varaamiseen.
+
+**Korjaus.** Pohjaimage vaihdettiin `nginxinc/nginx-unprivileged:alpine`-imageen, jossa myös
+pääprosessi ajaa uid 101:llä. Kaikki neljä kyvykkyyttä poistettiin: web ajaa nyt `cap_drop: ALL`
+ilman yhtään `cap_add`-riviä.
+
+Portti pysyy 80:ssä, vaikka image kuuntelee oletuksena 8080:aa. Näin Cloudflaren tunnelin public
+hostname -kohde (`web:80`) pysyy ennallaan eikä sivusto käy alhaalla käyttöönoton takia.
+Ei-root-prosessi saa varata alle 1024:n portin vain, jos kontin verkkonimiavaruudessa
+`net.ipv4.ip_unprivileged_port_start` on nolla, ja se asetetaan compose-tiedostossa. Asetus koskee
+vain tämän yhden kontin omaa verkkonimiavaruutta, jossa ei aja mitään muuta kuin nginx, joten se ei
+anna hyökkääjälle uutta kykyä: portin varaaminen omassa nimiavaruudessa ei johda mihinkään.
+
+| Tiedosto | Mitä muuttui |
+|---|---|
+| `frontend/Dockerfile` | pohjaimage `nginx:alpine` → `nginxinc/nginx-unprivileged:alpine` |
+| `deploy/docker-compose.yml` | `cap_add`-lohko pois web:ltä, tilalle `sysctls: net.ipv4.ip_unprivileged_port_start: "0"` |
+
+**Todennus.** Oikea `nginx.conf` ajettiin unprivileged-imagessa kolmella eri
+asetusyhdistelmällä, ja lopuksi koko tuotantopino paikallisesti:
+
+1. Tavoitetila (sysctl 0, nolla kyvykkyyttä): `ps` näyttää pääprosessin ja kaikki 32 työprosessia
+   `nginx`-käyttäjänä (uid 101), **nolla root-prosessia**. `docker inspect`: `CapDrop=[ALL]`,
+   `CapAdd=[]`. nginx kuuntelee `0.0.0.0:80`.
+2. Tavallisen Linux-palvelimen oletus jäljiteltynä (`ip_unprivileged_port_start=1024`): nginx
+   kaatuu heti, `bind() to 0.0.0.0:80 failed (13: Permission denied)`.
+3. Sama, mutta `NET_BIND_SERVICE` lisättynä: **kaatuu silti samaan virheeseen**. Kyvykkyys ei
+   välity ei-root-prosessille, koska Docker ei aseta ambient-kyvykkyyksiä. Siksi oikea keino on
+   sysctl eikä `cap_add`.
+4. Koko pino paikallisesti: web on `healthy`, ja etusivu, SPA-fallback, `/assets/`:n
+   välimuistiotsake, kirjautuminen ja istunto toimivat. Turvaotsakkeita tulee 8/8 kaikista
+   kolmesta location-lohkosta, ja kirjautumisen pyyntöraja toimii ennallaan (6 × 401, sitten
+   12 × 429). 1,45 MB:n välitetty vastaus tuli tavu tavulta oikein myös hidastetulle asiakkaalle
+   eikä nginxin lokiin tullut yhtään virhettä: nginx loi itse uid 101:llä kaikki viisi
+   väliaikaishakemistoaan `/tmp`:hen, jonne tämä image ohjaa ne.
+5. **Tunnelin polku erikseen:** toinen kontti samassa compose-verkossa saa osoitteista
+   `http://web:80/` ja `http://web:80/api/health` vastauksen HTTP 200 — eli juuri sen, mitä
+   cloudflared tekee. Cloudflaren asetuksiin ei siis tarvitse koskea.
+
+**Sudenkuoppa, joka löytyi kokeilemalla.** Docker Desktop (WSL2) laskee
+`ip_unprivileged_port_start`-rajan nollaan valmiiksi, tavallinen Linux-palvelin ei. Ilman
+nimenomaista sysctl-riviä pino olisi siis toiminut kehityskoneella ja kaatunut palvelimella — juuri
+se tapaus, jota paikallinen koeajo ei itsestään paljasta.
+
+**Yhteensopivuus vanhaan imageen.** Mitattu molempiin suuntiin. Uusi image vanhalla
+compose-asetuksella (ylimääräiset `cap_add`-rivit mukana) toimii normaalisti eikä aja mitään
+rootina, eli käyttöönoton järjestys ei haittaa. Toisin päin ei: jos `IMAGE_TAG` kiinnitetään
+vanhaan, root-pohjaiseen web-imageen uuden compose-tiedoston kanssa, kontti kaatuu silmukkaan
+virheeseen `chown("/var/cache/nginx/client_temp", 101) failed (1: Operation not permitted)`. Image
+ja compose-tiedosto liikkuvat siis yhdessä (ks. docs/JULKAISU.md luku 7).
+
+**Tietoisesti tekemättä.** Erillistä migraatioroolia kantaan ei tehty: sovellus ajaa migraatiot
+itse käynnistyessään, joten se tarvitsisi kaksi yhteysosoitetta.
 
 ---
 
@@ -395,7 +448,7 @@ Paikalliset kopiot ovat salaamattomia, joten ne toimivat varareittinä.
 | 6. Julkinen näyteikkuna näyttää tarkkaa dataa | **tiedostettu valinta**; paino ja pituus piilotettu kirjautumattomilta (`PUBLIC_BODY_METRICS`) |
 | 7. `rsa`-kirjaston aikakanava-haavoittuvuus | **ohitettu tietoisesti**: riippuvuus tulee `jsonwebtoken`in kautta, mutta sovellus allekirjoittaa vain HS256:lla eikä RSA-koodia ajeta. Ohitus ja perustelu `backend/.cargo/audit.toml`, ja `cargo audit` ajaa CI:ssä |
 | 8. CI:n ja toimitusketjun hygienia | **korjattu** (luku 7) |
-| 9. Konttien ja kannan oikeudet | **korjattu** (luku 6): kyvykkyydet karsittu ja sovelluksella on oma ei-superuser-rooli. nginxin pääprosessi on yhä root, mikä vaatisi tunnelin kohteen muuttamista |
+| 9. Konttien ja kannan oikeudet | **korjattu** (luku 6): yksikään kontti ei aja prosessia rootina, kaikki kyvykkyydet on pudotettu ja sovelluksella on kannassa oma ei-superuser-rooli |
 | 10. Lokiin kirjoitettiin käyttäjän syöte sellaisenaan | **korjattu** (luku 8) |
 | 11. Sivutuksen ylivuoto | **korjattu** (luku 8) |
 | 12. Swagger UI ja versiotieto julkisia | **tiedostettu valinta**; kolmannen osapuolen validator-kutsu poistettu |
@@ -418,5 +471,6 @@ Palvelimella, kertaluonteisesti (ks. docs/JULKAISU.md luku 6b):
 3. Ota kannan sovellusrooli käyttöön: aseta `DB_APP_USER` ja `DB_APP_PASSWORD` ja aja
    `deploy/sql/app-role-handover.sql` kertaluonteisesti olemassa olevalle kannalle.
 
-Jäljelle jää vain `nginx-unprivileged` (luku 6), joka vaatii myös Cloudflaren tunnelin kohteen
-muuttamista portista 80 porttiin 8080.
+Koodin puolelta ei jää avoimia kohtia: katselmoinnin kaikki 13 löydöstä on korjattu tai kirjattu
+tiedostetuksi valinnaksi (luku 10). Kohdat 2 ja 3 yllä ovat pelkkää käyttöönottoa — molemmat
+muutokset ovat valmiina repossa ja odottavat vain rivejä `deploy/.env`-tiedostossa.

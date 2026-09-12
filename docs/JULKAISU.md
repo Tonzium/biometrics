@@ -298,6 +298,8 @@ avaimella, joten palvelin ei voi purkaa omia vanhoja varmuuskopioitaan.
 | Oire | Syy ja korjaus |
 |---|---|
 | Cloudflare näyttää 502/530 | `web`-kontti ei ole ylhäällä tai public hostnamen URL ei ole `web:80`. `docker compose ps`, `logs web`. |
+| `web` kaatuu: "bind() to 0.0.0.0:80 failed (13: Permission denied)" | Isäntä ei hyväksynyt `net.ipv4.ip_unprivileged_port_start`-asetusta. nginx ajaa ei-root-käyttäjänä, joten se tarvitsee sen portille 80. Vaihtoehto: `frontend/nginx.conf`:iin `listen 8080`, web-image uudelleen ja tunnelin kohteeksi `web:8080`. |
+| `web` kaatuu: `chown("/var/cache/nginx/client_temp", 101) failed` | `IMAGE_TAG` osoittaa vanhaan, root-pohjaiseen web-imageen, jolta nykyinen compose-tiedosto on ottanut kyvykkyydet pois. Poista `IMAGE_TAG`-kiinnitys (oletus `latest`) tai palauta web:n `cap_add`-lohko. |
 | cloudflared-kontti käynnistyy uudelleen | Token puuttuu tai on väärä. `logs cloudflared`. |
 | Kirjautuminen onnistuu, mutta seuraava sivu on taas kirjautumaton | `COOKIE_SECURE` on `false` tai selain ei ole HTTPS:n takana. Tuotannossa aina `true`. |
 | Polar-yhdistys päättyy "oauth state mismatch" | Redirect URL Polarin asiakkaassa ei täsmää `POLAR_REDIRECT_URL`:iin tai cookie ei kulkenut (edellinen rivi). |
