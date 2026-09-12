@@ -11,6 +11,16 @@
 
 name: polar-data-hub
 
+# Lokien kierrätys. Dockerin oletusajuri kasvattaa json-lokia rajatta, ja
+# pyyntötulva kirjoittaa sekä nginxin pääsylokia että api:n hylkäysrivejä
+# samalle levylle, jolla kannan data on. Käytössä niissä palveluissa, jotka
+# kirjoittavat lokia joka pyynnöstä.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgres:18-alpine
@@ -31,11 +41,49 @@ services:
   api:
     image: ${IMAGE_PREFIX:-ghcr.io/tonzium/biometrics}-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
-    env_file: .env
+    logging: *logging
+    # Nimetty lista muuttujista, jotka api-prosessi saa. Tässä oli ennen
+    # `env_file: .env`, jolloin KOKO deploy/.env valui api-prosessiin – myös
+    # CLOUDFLARE_TUNNEL_TOKEN. Sillä tokenilla api:n kaapannut hyökkääjä voisi
+    # ajaa oman cloudflaredin ja ohjata julkisen osoitteen omalle palvelimelleen,
+    # joten token näkyy vain cloudflared-kontille. Kantatunnukset api saa
+    # edelleen DATABASE_URL:ssa, jota se tarvitsee, mutta ei erillisinä
+    # POSTGRES_*-muuttujina.
+    #
+    # YLLÄPITO: jos backend alkaa lukea uutta ympäristömuuttujaa, lisää se tähän
+    # listaan JA deploy/.env.example-tiedostoon. Muuten api ei näe sitä lainkaan:
+    # virhettä ei tule, vaan asetus jää hiljaa config.rs:n oletusarvoon. CI
+    # tarkistaa tämän (ks. .github/workflows/ci.yml).
     environment:
-      # Ohittaa .env-tiedoston DATABASE_URL:n: kanta on aina compose-verkon `db`.
+      # Kanta on aina compose-verkon `db`; .env:n DATABASE_URL koskee vain kehitystä.
       DATABASE_URL: postgres://${POSTGRES_USER:-polar}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-polar}
+      # Kontin sisäinen portti; nginx tekee proxy_pass http://api:8080.
       BIND_ADDR: 0.0.0.0:8080
+      # Pakolliset salaisuudet. Ei `:?`-muotoa, koska compose tulkitsee tyhjän
+      # arvon puuttuvaksi ja CI validoi nämä tiedostot ilman .env:iä. Tyhjä tai
+      # puuttuva arvo kaataa silti api:n heti käynnistyksessä (config.rs
+      # `required()`: "JWT_SECRET is not set" / "JWT_SECRET is empty").
+      JWT_SECRET: ${JWT_SECRET}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+      # Valinnaiset: tyhjä arvo tarkoittaa "ei asetettu", jolloin oletus tulee
+      # config.rs:stä (SESSION_HOURS 168, COOKIE_SECURE true, PUBLIC_READ true,
+      # PUBLIC_BODY_METRICS false, SYNC_INTERVAL_HOURS 6).
+      SESSION_HOURS: ${SESSION_HOURS:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
+      PUBLIC_READ: ${PUBLIC_READ:-}
+      PUBLIC_BODY_METRICS: ${PUBLIC_BODY_METRICS:-}
+      SYNC_INTERVAL_HOURS: ${SYNC_INTERVAL_HOURS:-}
+      # Polar-tunnukset: kaikki kolme tai ei yhtään (config.rs kaatuu välimuodosta).
+      POLAR_CLIENT_ID: ${POLAR_CLIENT_ID:-}
+      POLAR_CLIENT_SECRET: ${POLAR_CLIENT_SECRET:-}
+      POLAR_REDIRECT_URL: ${POLAR_REDIRECT_URL:-}
+      # Vain tyhjään kantaan luotavaan omistajakäyttäjään (seed.rs). Kun omistaja
+      # on luotu, nämä voi poistaa .env:stä (ks. docs/JULKAISU.md).
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Tämän lukee tracing_subscriber, ei config.rs. Oletus kirjoitettu auki:
+      # tyhjä arvo ylikirjoittaisi imagen `ENV RUST_LOG=info` ja hiljentäisi lokit.
+      RUST_LOG: ${RUST_LOG:-info}
     depends_on:
       db:
         condition: service_healthy
@@ -45,6 +93,7 @@ services:
   web:
     image: ${IMAGE_PREFIX:-ghcr.io/tonzium/biometrics}-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    logging: *logging
     depends_on:
       api:
         condition: service_healthy

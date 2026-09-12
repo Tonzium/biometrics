@@ -8,7 +8,7 @@ use axum::Router;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
-use utoipa_swagger_ui::SwaggerUi;
+use utoipa_swagger_ui::{Config, SwaggerUi};
 
 use crate::state::AppState;
 
@@ -48,7 +48,14 @@ pub fn router(state: AppState) -> Router {
         .split_for_parts();
 
     router
-        .merge(SwaggerUi::new("/api/docs").url("/api/openapi.json", openapi))
+        // validator_url("none") estää Swagger UI:n online-validator-merkin: se
+        // latautuisi validator.swagger.io:sta, vuotaisi API-kuvauksen osoitteen
+        // kolmannelle osapuolelle ja osuisi nyt myös CSP:n img-src-rajaan.
+        .merge(
+            SwaggerUi::new("/api/docs")
+                .url("/api/openapi.json", openapi)
+                .config(Config::default().validator_url("none")),
+        )
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }

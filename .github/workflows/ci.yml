@@ -146,13 +146,28 @@ jobs:
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
 
-      # api-palvelu lukee deploy/.env-tiedoston (env_file), joten validointiin
-      # tarvitaan sellainen; esimerkkitiedosto kelpaa.
+      # Compose-tiedostot eivät enää tarvitse .env-tiedostoa validointiin: api
+      # saa muuttujat nimetystä environment-listasta (ei env_file), ja vain
+      # db-palvelun POSTGRES_PASSWORD on pakollinen. Muut interpolaatiot menevät
+      # tyhjiksi: compose varoittaa lokissa, mutta paluukoodi on 0.
       - name: Validate compose files
         run: |
-          cp deploy/.env.example deploy/.env
           docker compose -f deploy/docker-compose.yml config --quiet
           docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml -f deploy/docker-compose.local.yml config --quiet
         env:
           POSTGRES_PASSWORD: ci
-          CLOUDFLARE_TUNNEL_TOKEN: ci
+
+      # Jokaisen backendin lukeman ympäristömuuttujan on oltava api-palvelun
+      # environment-listalla. Muuten compose ei välitä sitä konttiin lainkaan ja
+      # asetus jäisi tuotannossa hiljaa oletusarvoonsa.
+      - name: Env allowlist covers every variable the backend reads
+        run: |
+          allowlist=$(awk '/^  api:$/{f=1;next} f&&/^  [a-z]/{exit} f' deploy/docker-compose.yml | grep -oE '^      [A-Z][A-Z_0-9]*:' | tr -d ' :' | sort -u)
+          read_vars=$(grep -ohE '(optional_parsed|optional|required|env::var)\("[A-Z_0-9]+"' backend/crates/api/src/config.rs | grep -oE '[A-Z_0-9]{3,}' | sort -u)
+          echo "api environment: $(echo $allowlist)"
+          status=0
+          # RUST_LOG luetaan tracing_subscriberin EnvFilterillä, ei config.rs:ssä.
+          for v in $read_vars RUST_LOG; do
+            echo "$allowlist" | grep -qx "$v" || { echo "PUUTTUU api-palvelun environment-listalta: $v"; status=1; }
+          done
+          exit $status

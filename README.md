@@ -103,3 +103,10 @@ frontend/   Vite + React + TypeScript: src/pages (sivut), src/components (kaavio
 deploy/     docker-compose.yml (tuotanto), docker-compose.dev.yml (kehityskanta), .env.example
 docs/       suunnitelma ja kurssimateriaali
 ```
+
+## Palvelimella
+
+Nopea käyttöönotto
+```
+./deploy/deploy.sh
+```
