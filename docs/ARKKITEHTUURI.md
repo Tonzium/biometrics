@@ -130,6 +130,8 @@ alkion katkaistuna, jotta jäsennysvirheen syy näkyy lokista ilman arvailua.
 | Toimitusketju | CI:n actionit kiinnitetty commitin SHA:han, työnkulun oletusoikeus `contents: read`, `cargo audit` ja `npm audit` putkessa, Dependabot päivittää riippuvuudet |
 | Verkko | ei avoimia portteja; TLS Cloudflaressa |
 | Konttien oikeudet | kaikilla `no-new-privileges`; api ja cloudflared `cap_drop: ALL`; web pudottaa kaikki paitsi neljä nginxin tarvitsemaa. api-prosessi ajaa ei-root-käyttäjänä (uid 10001) |
+| Kannan oikeudet | sovellus yhdistää omalla roolilla ilman superuser-oikeuksia (`DB_APP_USER`): ei `COPY ... FROM PROGRAM`, ei palvelimen tiedostoja, ei roolien luontia. Rooli omistaa public-skeeman, jotta migraatiot toimivat; `POSTGRES_USER` jää ylläpitoon |
+| Varmuuskopiot | päivittäinen `pg_dump` paikallisesti (`chmod 600`, 30 vrk) ja salattuna koneen ulkopuolelle (`age`, julkinen avain, 90 vrk). Palvelin ei voi purkaa omia etäkopioitaan |
 | Rajoitus | `PUBLIC_READ=false` tai Cloudflare Access sulkee sivuston kirjautumisen taakse |
 
 Katselmoinnin löydökset, tehdyt korjaukset ja avoimet kohdat: [TIETOTURVA.md](TIETOTURVA.md).

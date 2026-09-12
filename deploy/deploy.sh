@@ -13,6 +13,18 @@ if [[ ! -f deploy/.env ]]; then
     exit 1
 fi
 
+# Sovellusroolin muuttujat on asetettava molemmat tai ei kumpaakaan. Vain
+# toinen asetettuna DATABASE_URL saisi väärän yhdistelmän (esim. superuserin
+# nimen ja sovellusroolin salasanan), ja api jäisi uudelleenkäynnistyssilmukkaan
+# autentikointivirheen takia. Kiinni otetaan ennen kuin mitään käynnistetään.
+app_user_set=$(grep -cE '^DB_APP_USER=.+' deploy/.env || true)
+app_pw_set=$(grep -cE '^DB_APP_PASSWORD=.+' deploy/.env || true)
+if [[ "$app_user_set" != "$app_pw_set" ]]; then
+    echo "deploy/.env: aseta sekä DB_APP_USER että DB_APP_PASSWORD, tai kumpaakaan ei lainkaan." >&2
+    echo "Ks. docs/JULKAISU.md (sovelluksen kantarooli)." >&2
+    exit 1
+fi
+
 echo "== git pull"
 git pull --ff-only
 

@@ -211,7 +211,7 @@ tilanteessa. Tarkistusvaihe kaatuu oikein, kun muuttuja poistetaan listalta.
 
 ---
 
-## 6. Konttien oikeudet
+## 6. Konttien ja kannan oikeudet
 
 **Ongelma.** Yksikään kontti ei rajoittanut Linux-kyvykkyyksiä eikä estänyt oikeuksien
 korottamista setuid-binäärillä. Kontista karannut prosessi olisi saanut koko oletuskyvykkyysjoukon.
@@ -231,12 +231,65 @@ käyttäjä `app` (uid 10001); web `CapDrop=[ALL]` ja vain ne neljä lisättyä;
 `no-new-privileges:true`. nginxin työprosessit ajavat `nginx`-käyttäjänä (pääprosessi on rootina,
 ks. alla). Koko pino käynnistyi terveeksi näillä rajoituksilla.
 
+### Kannan sovellusrooli
+
+**Ongelma.** Sovellus yhdisti kantaan `POSTGRES_USER`-tunnuksella, jonka postgres-image luo
+**superuserina**. Kaikki kyselyt ovat parametrisoituja, käännösaikana tarkistettuja sqlx-makroja,
+joten SQL-injektiota ei ole — mutta superuser tarkoittaa, että jos api-prosessi joskus kaapataan,
+hyökkääjä saa kannan kautta käyttöjärjestelmäkomentoja (`COPY ... FROM PROGRAM`), voi lukea ja
+kirjoittaa palvelimen tiedostoja, luoda rooleja ja ohittaa rivitason suojaukset.
+
+**Korjaus.** Sovellukselle luodaan oma rooli ilman superuser-oikeuksia. Se omistaa public-skeeman,
+joten se voi ajaa migraatiot, mutta ei mitään muuta. `POSTGRES_USER` jää ylläpitoon: `pg_dump`,
+`psql` ja kannan omistajuus.
+
+Rooli otetaan käyttöön kahdella rivillä `deploy/.env`-tiedostossa (`DB_APP_USER`,
+`DB_APP_PASSWORD`). Jos ne ovat tyhjiä, api käyttää superuseria kuten ennen — pelkkä uuden
+compose-tiedoston käyttöönotto ei siis muuta mitään, ja paluu entiseen on kahden rivin
+kommentointi. `deploy.sh` kaatuu, jos vain toinen on asetettu, koska silloin `DATABASE_URL` saisi
+väärän käyttäjä/salasana-yhdistelmän.
+
+Uusi asennus saa roolin itsestään (`deploy/initdb/10-app-role.sh`, jonka postgres-image ajaa vain
+tyhjään datahakemistoon). Olemassa oleva kanta siirretään kertaluonteisesti:
+`deploy/sql/app-role-handover.sql`.
+
+| Tiedosto | Mitä muuttui |
+|---|---|
+| `deploy/initdb/10-app-role.sh` | **uusi**: luo roolin ensimmäisellä käynnistyksellä |
+| `deploy/sql/app-role-handover.sql` | **uusi**: kertaluonteinen siirto olemassa olevalle kannalle |
+| `deploy/docker-compose.yml` | init-skriptin liitos, roolin muuttujat db:lle, `DATABASE_URL` käyttää roolia jos se on asetettu |
+| `deploy/deploy.sh` | tarkistus: molemmat muuttujat tai ei kumpaakaan |
+| `deploy/.env.example` | uudet muuttujat ja perustelut |
+
+**Todennus.** Koko tuotantopino ajettiin paikallisesti roolin kanssa: init-skripti loi roolin, api
+yhdisti sillä (`pg_stat_activity` näyttää kaksi `polar_app`-yhteyttä) ja ajoi **itse kaikki kuusi
+migraatiota** — myös `CREATE EXTENSION pgcrypto`, koska pgcrypto on PostgreSQL 18:ssa
+"trusted"-laajennus, jonka saa asentaa `CREATE`-oikeudella ilman superuseria. Skeema ja kaikki
+kymmenen taulua ovat roolin omistuksessa, kanta itse superuserin. Kirjautuminen, istunnon
+mitätöinti ja datan luku toimivat. Kahdeksan vaarallista komentoa estyy: `COPY ... FROM PROGRAM`,
+`pg_read_file`, `CREATE ROLE`, `ALTER ROLE ... SUPERUSER`, `pg_authid`-lukeminen, ei-trusted
+laajennuksen asennus, `ALTER SYSTEM` ja `DROP DATABASE`.
+
+Siirto olemassa olevaan kantaan todennettiin erikseen simuloimalla tuotanto (superuser omistaa
+kaiken, `_sqlx_migrations` ja dataa paikallaan): siirron jälkeen rooli tekee sekä DML:ää että
+DDL:ää, ja `pg_dump`/palautus säilyttää omistajuudet. Toinen ajo kaatuu siististi virheeseen
+"role already exists" eikä jätä puolittaista tilaa, koska koko siirto on yhdessä transaktiossa.
+
+**Sudenkuoppa, joka löytyi kokeilemalla.** `REASSIGN OWNED BY <superuser> TO ...` ei toimi:
+PostgreSQL hylkää sen virheellä *"cannot reassign ownership of objects owned by role ... because
+they are required by the database system"*, koska bootstrap-superuser omistaa myös
+järjestelmäobjekteja. Siksi omistajuus siirretään objekti kerrallaan, ja pgcrypton omat 37
+funktiota jätetään koskematta (`pg_depend.deptype = 'e'`).
+
+**Mitä tämä ei suojaa.** Rooli omistaa taulut, joten se voi yhä pudottaa ja muuttaa niitä — se on
+migraatioiden hinta. Suoja kohdistuu nimenomaan SQL:stä käyttöjärjestelmään johtavaan tiehen ja
+muiden roolien koskemiseen.
+
 **Tietoisesti tekemättä.** Täysin ei-root nginx vaatisi `nginx-unprivileged`-imagen, joka
 kuuntelee porttia 8080. Se tarkoittaisi muutosta myös Cloudflaren tunnelin public hostname
--kohteeseen (nyt `web:80`), eli sivusto olisi alhaalla kunnes asetus on päivitetty käsin. Sama
-koskee kannan omaa ei-superuser-roolia: kaikki kyselyt ovat parametrisoituja käännösaikana
-tarkistettuja makroja, joten se olisi vain syvyyssuuntaista suojaa, ja vaihto vaatisi
-roolin luonnin ja omistajuuksien siirron olemassa olevassa kannassa.
+-kohteeseen (nyt `web:80`), eli sivusto olisi alhaalla kunnes asetus on päivitetty käsin. Myöskään
+erillistä migraatioroolia ei tehty: sovellus ajaa migraatiot itse käynnistyessään, joten se
+tarvitsisi kaksi yhteysosoitetta.
 
 ---
 
@@ -278,13 +331,59 @@ lukukelvottomasta compose-lohkosta ja listalta puuttuvasta muuttujasta.
 | Lokien koko | Dockerin oletusajuri kasvattaa json-lokia rajatta samalla levyllä, jolla kannan data on | `max-size: 10m`, `max-file: 3` api- ja web-konteille | `deploy/docker-compose.yml` |
 | Lokin eheys | kirjautumisvirheen lokirivi kirjoitti käyttäjän syöttämän sähköpostin sellaisenaan, joten siihen pystyi upottamaan rivinvaihdoilla omia lokirivejä | `%email` → `?email`, joka escapettaa ohjausmerkit | `backend/crates/api/src/routes/auth.rs` |
 | Sivutuksen ylivuoto | `(page - 1) * per_page` laskettiin `u32`:na: suuri `page` kiersi ympäri (release) tai panikoi 500:ksi (debug) | laskenta `i64`:nä | `backend/crates/api/src/routes/data/records.rs` |
-| Varmuuskopiot | `pg_dump`-tiedostot syntyivät oletusoikeuksilla kotihakemistoon | `umask 077` ja `chmod 600`; kommentti muistuttaa kopion siirtämisestä koneen ulkopuolelle | `deploy/backup.sh` |
+| Varmuuskopiot | `pg_dump`-tiedostot syntyivät oletusoikeuksilla kotihakemistoon | `umask 077` ja `chmod 600`; etäkopio luvussa 9 | `deploy/backup.sh` |
 | Swagger UI:n validator | `/api/docs/` latasi merkkikuvan validator.swagger.io:sta ja vuoti API-kuvauksen osoitteen kolmannelle osapuolelle | `validator_url("none")` | `backend/crates/api/src/routes/mod.rs` |
 | 429:n viesti käyttäjälle | backend palauttaa englanninkielisen viestin API-kuluttajille, ja käyttöliittymä näyttäisi sen sellaisenaan suomenkielisellä sivulla | oma suomenkielinen teksti ja testi | `frontend/src/pages/LoginPage.tsx` |
 
 ---
 
-## 9. Katselmoinnin tila
+## 9. Etävarmuuskopio
+
+**Ongelma.** Nimenomaan se kopio, jonka pitäisi pelastaa tilanne, oli samalla levyllä kuin kanta:
+levyrikko, varastettu kone, kiristyshaittaohjelma tai väärin kirjoitettu `docker compose down -v`
+olisi vienyt datan ja varmuuskopiot samalla kertaa.
+
+**Korjaus.** `deploy/backup.sh` lähettää päivittäisen dumpin myös koneen ulkopuolelle. Kopio
+salataan ennen lähtöä `age`lla **julkisella avaimella**, joten palvelin voi kirjoittaa
+varmuuskopioita mutta ei lukea omia vanhoja kopioitaan. Yksityinen avain ei ole palvelimella
+lainkaan.
+
+Kohde on mikä tahansa `rclone`n tukema paikka (esimerkit `.env.example`:ssa: Cloudflare R2 ja
+SFTP). Tunnukset annetaan `RCLONE_CONFIG_*`-ympäristömuuttujina, jotka tulevat samasta
+`deploy/.env`-tiedostosta kuin muut salaisuudet, joten erillistä `rclone.conf`-tiedostoa ja toista
+suojattavaa tiedostoa ei tarvita. Ilman asetuksia skripti toimii kuten ennen ja varoittaa, ettei
+etäkopiota ole.
+
+Paikallinen kopio jää tarkoituksella salaamattomaksi: se on samalla koneella kuin kanta, joten
+salaus ei suojaisi miltään uudelta, ja se hankaloittaisi rutiinipalautusta. Oikeudet ovat
+`umask 077` + `chmod 600`.
+
+| Tiedosto | Mitä muuttui |
+|---|---|
+| `deploy/backup.sh` | koon järkevyystarkistus, salaus, lähetys, koon varmistus, etäsäilytys |
+| `deploy/.env.example` | `BACKUP_AGE_RECIPIENT`, `BACKUP_REMOTE`, `BACKUP_REMOTE_KEEP_DAYS` ja esimerkit |
+
+**Todennus.** Oikea `backup.sh` ajettiin Debian-kontissa (sama käyttöjärjestelmä kuin
+palvelimella), `docker`-komento tuettuna ja paikallinen hakemisto rclone-kohteena. Viisi tapausta:
+
+1. Onnistunut ajo: paikallinen kopio oikeuksin `600`, salattu kopio perillä, ja purku yksityisellä
+   avaimella antaa **tavu tavulta saman** tiedoston takaisin.
+2. Epäonnistunut `pg_dump` (20 tavua): ajo keskeytyy koodilla 1 **eikä lähetä mitään**. Ilman tätä
+   rikkinäinen kopio olisi korvannut toimivat etäkopiot päivä kerrallaan — tyhjä tiedosto
+   salautuu ja latautuu aivan yhtä hyvin kuin kunnollinen. Raja 1000 tavua on mitattu: pelkkä
+   skeema pakkautuu 3567 tavuun, epäonnistunut dump 20:een.
+3. Tavoittamaton kohde: virhe näkyy, paluukoodi on 1 ja **paikallinen kopio jää silti talteen**.
+   rclonen uudelleenyritykset on rajattu, jotta cron-ajo ei jumitu minuuteiksi.
+4. Asetukset puuttuvat: paikallinen kopio onnistuu, varoitus lokiin, paluukoodi 0.
+5. Säilytys: yli 90 päivää vanha etäkopio poistuu, tuore jää.
+
+**Avaimen menettäminen.** Jos yksityinen age-avain katoaa, etäkopiot ovat lopullisesti auki
+saamatta. Avain luodaan omalla koneella, ei palvelimella, ja talletetaan salasanojen hallintaan.
+Paikalliset kopiot ovat salaamattomia, joten ne toimivat varareittinä.
+
+---
+
+## 10. Katselmoinnin tila
 
 | Löydös | Tila |
 |---|---|
@@ -296,23 +395,28 @@ lukukelvottomasta compose-lohkosta ja listalta puuttuvasta muuttujasta.
 | 6. Julkinen näyteikkuna näyttää tarkkaa dataa | **tiedostettu valinta**; paino ja pituus piilotettu kirjautumattomilta (`PUBLIC_BODY_METRICS`) |
 | 7. `rsa`-kirjaston aikakanava-haavoittuvuus | **ohitettu tietoisesti**: riippuvuus tulee `jsonwebtoken`in kautta, mutta sovellus allekirjoittaa vain HS256:lla eikä RSA-koodia ajeta. Ohitus ja perustelu `backend/.cargo/audit.toml`, ja `cargo audit` ajaa CI:ssä |
 | 8. CI:n ja toimitusketjun hygienia | **korjattu** (luku 7) |
-| 9. Konttien ja kannan oikeudet | **osin korjattu** (luku 6): kyvykkyydet karsittu, mutta nginxin pääprosessi on yhä root ja sovellus käyttää kannan superuseria |
+| 9. Konttien ja kannan oikeudet | **korjattu** (luku 6): kyvykkyydet karsittu ja sovelluksella on oma ei-superuser-rooli. nginxin pääprosessi on yhä root, mikä vaatisi tunnelin kohteen muuttamista |
 | 10. Lokiin kirjoitettiin käyttäjän syöte sellaisenaan | **korjattu** (luku 8) |
 | 11. Sivutuksen ylivuoto | **korjattu** (luku 8) |
 | 12. Swagger UI ja versiotieto julkisia | **tiedostettu valinta**; kolmannen osapuolen validator-kutsu poistettu |
-| 13. Varmuuskopiot salaamattomina kotihakemistossa | **osin korjattu** (luku 8): oikeudet kunnossa, kopio koneen ulkopuolelle on yhä tekemättä |
+| 13. Varmuuskopiot salaamattomina kotihakemistossa | **korjattu**: oikeudet kunnossa (luku 8) ja salattu kopio koneen ulkopuolelle (luku 9) |
 
 ---
 
-## 10. Seuraavat askeleet
+## 11. Seuraavat askeleet
 
 Cloudflaren hallintapaneelissa, ei koodimuutoksia:
 
 1. Valinnainen: **rate limiting -sääntö** `/api/auth/login`-polulle. nginx rajaa jo per IP, mutta
    reunalla tulva ei kuluta edes tunnelin kapasiteettia.
 
-Muuta, kun aika riittää:
+Palvelimella, kertaluonteisesti (ks. docs/JULKAISU.md luku 6b):
 
-2. Varmuuskopio myös koneen ulkopuolelle (luku 9, löydös 13).
-3. Kannan oma ei-superuser-rooli ja `nginx-unprivileged` (luku 6) — molemmat vaativat
-   käsityötä julkaisussa, joten niitä ei tehty ohessa.
+2. Ota etävarmuuskopio käyttöön: `apt-get install age rclone`, luo avainpari omalla koneella, luo
+   kohde ja täytä kolme muuttujaa `deploy/.env`-tiedostoon. Testaa palautus heti — varmuuskopio,
+   jota ei ole kerran palautettu, on arvaus.
+3. Ota kannan sovellusrooli käyttöön: aseta `DB_APP_USER` ja `DB_APP_PASSWORD` ja aja
+   `deploy/sql/app-role-handover.sql` kertaluonteisesti olemassa olevalle kannalle.
+
+Jäljelle jää vain `nginx-unprivileged` (luku 6), joka vaatii myös Cloudflaren tunnelin kohteen
+muuttamista portista 80 porttiin 8080.

@@ -175,6 +175,124 @@ Docker käynnistyy bootissa.
 
 **Synkronointihistoria**: Asetukset-sivu tai `GET /api/sync/runs` kirjautuneena.
 
+## 6b. Kannan sovellusrooli ja etävarmuuskopio
+
+Nämä kaksi ovat valinnaisia mutta suositeltuja. Kumpikin otetaan käyttöön muuttamalla vain
+`deploy/.env`-tiedostoa; ilman niitä kaikki toimii kuten ennen.
+
+### Sovellusrooli (api ei enää yhdistä superuserina)
+
+Sovellus ajaa kyselynsä omalla roolilla, jolla ei ole superuser-oikeuksia. Se ei voi ajaa
+`COPY ... FROM PROGRAM` -komentoa (eli SQL:stä käyttöjärjestelmäkomentoihin), lukea palvelimen
+tiedostoja, luoda rooleja eikä pudottaa kantaa. Migraatiot se ajaa normaalisti.
+
+1. Luo salasana ja lisää `deploy/.env`-tiedostoon **molemmat** rivit (vain kirjaimia ja numeroita,
+   koska arvo upotetaan yhteysosoitteeseen):
+
+   ```bash
+   openssl rand -hex 24      # kopioi tuloste DB_APP_PASSWORD:iin
+   ```
+
+   ```
+   DB_APP_USER=polar_app
+   DB_APP_PASSWORD=<äskeinen tuloste>
+   ```
+
+2. **Olemassa olevalle kannalle** (eli tälle palvelimelle) aja kertaluonteinen siirto. Kanta on jo
+   alustettu, joten init-skripti ei enää aja itseään. Ota ensin varmuuskopio:
+
+   ```bash
+   ./deploy/backup.sh
+   set -a; . deploy/.env; set +a
+   docker compose -f deploy/docker-compose.yml exec -T db \
+     psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+          -v ON_ERROR_STOP=1 -v role="$DB_APP_USER" -v pw="$DB_APP_PASSWORD" \
+          -v db="$POSTGRES_DB" < deploy/sql/app-role-handover.sql
+   ```
+
+   Lopussa tulostuu tarkistus: skeeman ja taulujen omistajana pitää olla `polar_app` ja kannan
+   omistajana edelleen `polar`.
+
+3. Käynnistä api uudelleen, jotta se ottaa uuden yhteysosoitteen käyttöön:
+
+   ```bash
+   docker compose -f deploy/docker-compose.yml up -d
+   docker compose -f deploy/docker-compose.yml logs --tail 20 api
+   ```
+
+   Lokissa pitää näkyä `migrations applied` ja `listening`. Tarkista vielä kumpi rooli on
+   yhteydessä:
+
+   ```bash
+   docker compose -f deploy/docker-compose.yml exec -T db \
+     psql -U polar -d polar -c "select usename, count(*) from pg_stat_activity where datname='polar' group by usename;"
+   ```
+
+**Paluu entiseen**, jos api ei käynnisty: kommentoi `DB_APP_USER` ja `DB_APP_PASSWORD` pois
+`deploy/.env`-tiedostosta ja aja `docker compose -f deploy/docker-compose.yml up -d`. Rooli jää
+kantaan, mutta api yhdistää jälleen superuserina. Taulut ovat siirron jälkeen `polar_app`:n
+omistuksessa, mikä ei estä superuseria tekemästä mitään.
+
+Uusi asennus (tyhjä kanta) ei tarvitse kohtaa 2 lainkaan: rooli syntyy ensimmäisellä
+käynnistyksellä, kun muuttujat ovat `.env`:issä.
+
+### Etävarmuuskopio (salattu kopio koneen ulkopuolelle)
+
+Ilman tätä varmuuskopiot ovat samalla levyllä kuin kanta. Kopio salataan ennen lähtöä julkisella
+avaimella, joten palvelin ei voi purkaa omia vanhoja varmuuskopioitaan.
+
+1. Asenna työkalut palvelimelle:
+
+   ```bash
+   sudo apt-get install -y age rclone
+   ```
+
+2. Luo avainpari **omalla koneella, ei palvelimella**:
+
+   ```bash
+   age-keygen -o backup.key
+   ```
+
+   Tuloste sisältää julkisen avaimen (`age1...`). Talleta `backup.key` salasanojen hallintaan ja
+   varmista, että se on muuallakin kuin yhdellä koneella. **Jos yksityinen avain katoaa,
+   etäkopioita ei saa enää auki.**
+
+3. Luo kohde. Cloudflare R2 riittää moninkertaisesti (pakattu dump on kilotavuja):
+   Cloudflare → R2 → Create bucket, sitten **Manage API tokens** → luo token, jolla on
+   lukuoikeus ja kirjoitusoikeus vain tähän ämpäriin.
+
+4. Täytä `deploy/.env` (ks. `deploy/.env.example`, jossa on valmiit esimerkit R2:lle ja SFTP:lle):
+
+   ```
+   BACKUP_AGE_RECIPIENT=age1...          # kohdan 2 julkinen avain
+   BACKUP_REMOTE=offsite:polar-varmuuskopiot
+   RCLONE_CONFIG_OFFSITE_TYPE=s3
+   RCLONE_CONFIG_OFFSITE_PROVIDER=Cloudflare
+   RCLONE_CONFIG_OFFSITE_REGION=auto
+   RCLONE_CONFIG_OFFSITE_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+   RCLONE_CONFIG_OFFSITE_ACCESS_KEY_ID=...
+   RCLONE_CONFIG_OFFSITE_SECRET_ACCESS_KEY=...
+   ```
+
+5. Aja käsin ja katso että kopio menee perille:
+
+   ```bash
+   ./deploy/backup.sh
+   ```
+
+   Viimeinen rivi kertoo lähetetyn tiedoston ja koon. Yöllinen cron-ajo (kohta 6) tekee saman.
+
+6. **Testaa palautus heti.** Varmuuskopio, jota ei ole kerran palautettu, on arvaus. Omalla
+   koneella, jossa yksityinen avain on:
+
+   ```bash
+   rclone copyto "offsite:polar-varmuuskopiot/polar-2026-09-12.sql.gz.age" ./palautus.age
+   age -d -i backup.key palautus.age | gunzip | head -20
+   ```
+
+   Tulosteen pitää alkaa `-- PostgreSQL database dump`. Koko palautus menee samalla tavalla
+   `psql`-komentoon (ks. `deploy/backup.sh`-tiedoston alun kommentti).
+
 ## 7. Vianetsintä
 
 | Oire | Syy ja korjaus |
@@ -186,6 +304,10 @@ Docker käynnistyy bootissa.
 | Yhdistä-nappi antaa 503 | `POLAR_CLIENT_ID`/`SECRET` puuttuvat `.env`:stä. |
 | `api` ei käynnisty: "no users exist and ADMIN_EMAIL…" | Ensimmäinen käynnistys ilman admin-muuttujia. Lisää ne ja käynnistä uudelleen. |
 | `api` ei käynnisty: "APP_ENCRYPTION_KEY must decode to exactly 32 bytes" | Generoi avain komennolla `openssl rand -base64 32`. |
+| `api` kaatuu: `password authentication failed for user "polar_app"` | Sovellusrooli on asetettu `.env`:issä, mutta kantaan ei ole luotu roolia. Aja siirto (kohta 6b) tai kommentoi `DB_APP_USER`/`DB_APP_PASSWORD` pois. |
+| `deploy.sh`: "aseta sekä DB_APP_USER että DB_APP_PASSWORD" | Vain toinen rivi on täytetty. Molemmat tai ei kumpaakaan. |
+| Varmuuskopio: "on vain N tavua (alle 1000)" | `pg_dump` epäonnistui, eikä rikkinäistä kopiota lähetetty ulos. Tarkista `docker compose ps` ja db:n loki. |
+| Varmuuskopio: "age puuttuu" tai "rclone puuttuu" | `sudo apt-get install -y age rclone`. |
 | `api` ei käynnisty: "connecting to PostgreSQL … invalid port number" | `POSTGRES_PASSWORD` sisältää `/`, `+` tai `=`. Generoi uusi komennolla `openssl rand -hex 24`. Jos kanta ehti alustua vanhalla salasanalla eikä dataa vielä ole: `docker compose -f deploy/docker-compose.yml down -v` ja `up -d`. |
 | Synkronointi on `failed` ja virhe mainitsee 429 | Polarin rate limit. Odota `RateLimit-Reset`-ajan verran; ajastin yrittää uudelleen. |
 | `pull` antaa `denied` tai `unauthorized` | Repo on yksityinen: `docker login ghcr.io` (kohta 4) tai tee paketit julkisiksi GitHubissa (Packages → package → Settings → Change visibility). |

@@ -34,9 +34,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-polar}
       POSTGRES_USER: ${POSTGRES_USER:-polar}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Aseta POSTGRES_PASSWORD .env-tiedostoon}
+      # Sovelluksen oma, rajoitettu rooli. Nämä luetaan vain init-skriptissä
+      # (deploy/initdb), joka ajetaan ensimmäisellä käynnistyksellä. Tyhjä arvo =
+      # roolia ei luoda, ja api käyttää superuseria kuten ennen.
+      DB_APP_USER: ${DB_APP_USER:-}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:-}
     volumes:
       # Postgres 18 -image käyttää koko /var/lib/postgresql-hakemistoa datalle
       - pgdata:/var/lib/postgresql
+      # Ajetaan VAIN kun datahakemisto on tyhjä. Olemassa olevaan kantaan rooli
+      # lisätään kertaluonteisesti: deploy/sql/app-role-handover.sql.
+      - ./initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-polar} -d ${POSTGRES_DB:-polar}"]
       interval: 5s
@@ -67,7 +75,14 @@ services:
     # tarkistaa tämän (ks. .github/workflows/ci.yml).
     environment:
       # Kanta on aina compose-verkon `db`; .env:n DATABASE_URL koskee vain kehitystä.
-      DATABASE_URL: postgres://${POSTGRES_USER:-polar}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-polar}
+      #
+      # api yhdistää rajoitetulla sovellusroolilla, jos DB_APP_USER ja
+      # DB_APP_PASSWORD on asetettu; muuten superuserilla kuten ennen. Näin
+      # pelkkä uuden compose-tiedoston käyttöönotto ei muuta mitään, ja
+      # paluu entiseen on kahden rivin kommentointi .env:issä.
+      # Aseta molemmat tai ei kumpaakaan — deploy.sh tarkistaa tämän, koska
+      # puolittainen asetus antaisi väärän käyttäjä/salasana-yhdistelmän.
+      DATABASE_URL: postgres://${DB_APP_USER:-${POSTGRES_USER:-polar}}:${DB_APP_PASSWORD:-${POSTGRES_PASSWORD}}@db:5432/${POSTGRES_DB:-polar}
       # Kontin sisäinen portti; nginx tekee proxy_pass http://api:8080.
       BIND_ADDR: 0.0.0.0:8080
       # Pakolliset salaisuudet. Ei `:?`-muotoa, koska compose tulkitsee tyhjän
