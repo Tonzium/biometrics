@@ -21,12 +21,17 @@ export function LoginPage() {
     login.mutate({ email: email.trim(), password }, { onSuccess: () => void navigate(from, { replace: true }) })
   }
 
+  // 429 = palvelimen rinnakkaisuusraja salasanatarkistuksille on täynnä.
+  // Backend palauttaa englanninkielisen viestin API-kuluttajille, joten
+  // käyttöliittymä kääntää sen itse.
   const errorText =
     login.error instanceof ApiError && login.error.status === 401
       ? 'Väärä sähköposti tai salasana.'
-      : login.error instanceof Error
-        ? login.error.message
-        : null
+      : login.error instanceof ApiError && login.error.status === 429
+        ? 'Liikaa kirjautumisyrityksiä juuri nyt. Yritä hetken kuluttua uudelleen.'
+        : login.error instanceof Error
+          ? login.error.message
+          : null
 
   return (
     <section className="page page-narrow">

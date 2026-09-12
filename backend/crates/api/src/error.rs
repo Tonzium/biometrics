@@ -21,8 +21,11 @@ pub enum ApiError {
     Forbidden,
     NotFound(String),
     Conflict(String),
-    /// Ulkoinen palvelu (Polar) rajoitti pyyntöjä; `retry_after_secs` välitetään asiakkaalle.
+    /// Pyyntöjä tuli liikaa: joko ulkoinen palvelu (Polar) rajoitti meitä tai
+    /// oma rinnakkaisuusraja täyttyi (kirjautuminen). `retry_after_secs`
+    /// välitetään asiakkaalle `Retry-After`-otsakkeessa.
     TooManyRequests {
+        message: String,
         retry_after_secs: Option<u64>,
     },
     /// Toiminto vaatii asetuksen, jota ei ole (esim. Polar-tunnukset).
@@ -55,10 +58,10 @@ impl ApiError {
             Self::Forbidden => (StatusCode::FORBIDDEN, "forbidden", "not allowed".into()),
             Self::NotFound(m) => (StatusCode::NOT_FOUND, "not_found", m.clone()),
             Self::Conflict(m) => (StatusCode::CONFLICT, "conflict", m.clone()),
-            Self::TooManyRequests { .. } => (
+            Self::TooManyRequests { message, .. } => (
                 StatusCode::TOO_MANY_REQUESTS,
                 "too_many_requests",
-                "upstream rate limit reached, try again later".into(),
+                message.clone(),
             ),
             Self::ServiceUnavailable(m) => {
                 (StatusCode::SERVICE_UNAVAILABLE, "unavailable", m.clone())
@@ -85,6 +88,7 @@ impl IntoResponse for ApiError {
         let mut response = (status, body).into_response();
         if let Self::TooManyRequests {
             retry_after_secs: Some(secs),
+            ..
         } = self
             && let Ok(value) = secs.to_string().parse()
         {

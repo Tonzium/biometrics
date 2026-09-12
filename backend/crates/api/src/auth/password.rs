@@ -8,6 +8,7 @@ use argon2::{
     Argon2,
     password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
 };
+use tokio::sync::OwnedSemaphorePermit;
 
 /// Kiinteä tiiviste, jota vasten verrataan kun käyttäjää ei löydy.
 /// Näin kirjautumisen kesto ei paljasta, onko sähköposti olemassa.
@@ -26,8 +27,22 @@ pub async fn hash(password: String) -> anyhow::Result<String> {
 
 /// Palauttaa `true`, jos salasana täsmää. Virheellinen PHC-merkkijono
 /// tulkitaan epäonnistuneeksi kirjautumiseksi, ei palvelinvirheeksi.
-pub async fn verify(password: String, phc_hash: Option<String>) -> anyhow::Result<bool> {
+///
+/// `permit` on kirjautumisen rinnakkaisuusrajasta varattu paikka, ja se
+/// siirretään blokkaavaan tehtävään tarkoituksella: `spawn_blocking`-tehtävää
+/// ei voi keskeyttää, joten jos asiakas katkaisee yhteyden, pyynnön future
+/// putoaa mutta argon2 jää ajamaan loppuun. Jos permit eläisi vain futuressa,
+/// se vapautuisi heti katkaisusta ja päästäisi seuraavan laskennan käyntiin,
+/// eli raja ei pitäisi katkaistujen pyyntöjen tulvassa. Näin permit vapautuu
+/// vasta kun CPU-työ on todella ohi.
+pub async fn verify(
+    password: String,
+    phc_hash: Option<String>,
+    permit: OwnedSemaphorePermit,
+) -> anyhow::Result<bool> {
     tokio::task::spawn_blocking(move || {
+        // Permit siirtyy tähän sulkeumaan ja vapautuu vasta sen lopussa.
+        let _permit = permit;
         let stored = phc_hash.as_deref().unwrap_or(DUMMY_HASH);
         let Ok(parsed) = PasswordHash::new(stored) else {
             return false;
@@ -44,23 +59,41 @@ pub async fn verify(password: String, phc_hash: Option<String>) -> anyhow::Resul
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use tokio::sync::Semaphore;
+
     use super::*;
+
+    /// Näille testeille oma permit; itse rinnakkaisuusrajaa testataan
+    /// integraatiotestissä (`tests/auth.rs`).
+    fn permit() -> OwnedSemaphorePermit {
+        Arc::new(Semaphore::new(1)).try_acquire_owned().unwrap()
+    }
 
     #[tokio::test]
     async fn hash_and_verify_roundtrip() {
         let h = hash("hunter42".into()).await.unwrap();
         assert!(h.starts_with("$argon2id$"));
-        assert!(verify("hunter42".into(), Some(h.clone())).await.unwrap());
-        assert!(!verify("wrong".into(), Some(h)).await.unwrap());
+        assert!(
+            verify("hunter42".into(), Some(h.clone()), permit())
+                .await
+                .unwrap()
+        );
+        assert!(!verify("wrong".into(), Some(h), permit()).await.unwrap());
     }
 
     #[tokio::test]
     async fn missing_user_never_verifies() {
-        assert!(!verify("anything".into(), None).await.unwrap());
+        assert!(!verify("anything".into(), None, permit()).await.unwrap());
     }
 
     #[tokio::test]
     async fn garbage_hash_is_not_an_error() {
-        assert!(!verify("x".into(), Some("not-a-hash".into())).await.unwrap());
+        assert!(
+            !verify("x".into(), Some("not-a-hash".into()), permit())
+                .await
+                .unwrap()
+        );
     }
 }

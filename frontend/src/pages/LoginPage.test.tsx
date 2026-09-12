@@ -68,6 +68,28 @@ describe('LoginPage', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Väärä sähköposti tai salasana.'))
   })
 
+  it('shows a Finnish error on 429', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/auth/me') return jsonResponse(401, { error: { code: 'unauthorized', message: 'x' } })
+      if (url === '/api/auth/login')
+        return jsonResponse(429, { error: { code: 'too_many_requests', message: 'too many login attempts, try again shortly' } })
+      return jsonResponse(404, {})
+    })
+    renderLogin(fetchMock as unknown as typeof fetch)
+
+    const user = userEvent.setup()
+    await user.type(await screen.findByLabelText('Sähköposti'), 'a@b.fi')
+    await user.type(screen.getByLabelText('Salasana'), 'secret')
+    await user.click(screen.getByRole('button', { name: 'Kirjaudu' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Liikaa kirjautumisyrityksiä juuri nyt. Yritä hetken kuluttua uudelleen.',
+      ),
+    )
+  })
+
   it('keeps the submit button disabled until both fields are filled', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(401, { error: { code: 'unauthorized', message: 'x' } }))
     renderLogin(fetchMock as unknown as typeof fetch)

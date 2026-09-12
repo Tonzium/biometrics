@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
-    auth::{self, CurrentUser, jwt, password},
+    auth::{self, CurrentUser, LOGIN_RETRY_AFTER_SECS, jwt, password},
     db,
     error::{ApiError, ApiResult, ErrorBody},
     state::AppState,
@@ -29,8 +29,10 @@ pub struct LoginRequest {
 
 /// Kirjautuminen. Onnistuessa asettaa `pdh_session`-cookien ja palauttaa käyttäjän.
 /// Epäonnistuessa 401 ilman erottelua "väärä sähköposti" / "väärä salasana".
+/// Jos salasanatarkistuksia on jo käynnissä rajan verran, vastaus on 429.
 #[utoipa::path(post, path = "/auth/login", tag = "auth", request_body = LoginRequest,
-    responses((status = 200, body = User), (status = 400, body = ErrorBody), (status = 401, body = ErrorBody)))]
+    responses((status = 200, body = User), (status = 400, body = ErrorBody),
+              (status = 401, body = ErrorBody), (status = 429, body = ErrorBody)))]
 async fn login(
     State(state): State<AppState>,
     jar: CookieJar,
@@ -43,11 +45,23 @@ async fn login(
         ));
     }
 
+    // Rinnakkaisuusraja otetaan ennen kantakyselyä: hylätty pyyntö ei varaa
+    // yhteyttä poolista eikä käynnistä argon2-laskentaa. Permit annetaan
+    // `verify`lle, joka vapauttaa sen vasta laskennan päätyttyä. Lokiriviin ei
+    // oteta mitään pyynnöstä, jotta tulva ei voi kirjoittaa omaa tekstiään.
+    let Ok(permit) = state.login_limit.clone().try_acquire_owned() else {
+        tracing::warn!("login rejected: concurrency limit reached");
+        return Err(ApiError::TooManyRequests {
+            message: "too many login attempts, try again shortly".into(),
+            retry_after_secs: Some(LOGIN_RETRY_AFTER_SECS),
+        });
+    };
+
     let record = db::users::find_by_email(&state.pool, &email).await?;
     let stored_hash = record.as_ref().map(|r| r.password_hash.clone());
 
     // Verify ajetaan aina, myös tuntemattomalle käyttäjälle (ajoituspuolustus).
-    let ok = password::verify(req.password, stored_hash).await?;
+    let ok = password::verify(req.password, stored_hash, permit).await?;
     let Some(record) = record.filter(|_| ok) else {
         tracing::info!(%email, "failed login attempt");
         return Err(ApiError::Unauthorized);

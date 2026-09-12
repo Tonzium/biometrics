@@ -20,7 +20,21 @@ pub fn test_app(pool: PgPool) -> Router {
 }
 
 pub fn test_app_with(config: Config, pool: PgPool) -> Router {
-    api::app(AppState::new(config, pool).expect("test state"))
+    test_app_and_state_with(config, pool).0
+}
+
+/// Kuten [`test_app`], mutta palauttaa myös `AppState`-kopion. Tarvitaan
+/// testeissä, jotka koskettavat tilan kenttiä suoraan (esim. kirjautumisen
+/// rinnakkaisuusrajoitinta `login_limit`). Reititin ja palautettu tila jakavat
+/// samat `Arc`:t, joten testin varaama permit on sama permit, jota käsittelijä
+/// yrittää varata.
+pub fn test_app_and_state(pool: PgPool) -> (Router, AppState) {
+    test_app_and_state_with(Config::for_tests(), pool)
+}
+
+pub fn test_app_and_state_with(config: Config, pool: PgPool) -> (Router, AppState) {
+    let state = AppState::new(config, pool).expect("test state");
+    (api::app(state.clone()), state)
 }
 
 /// Lähettää pyynnön reitittimelle ilman verkkoa ja palauttaa vastauksen.

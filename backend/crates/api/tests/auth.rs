@@ -172,3 +172,54 @@ async fn seed_fails_loudly_without_credentials(pool: PgPool) {
     let result = api::seed::ensure_owner(&pool, &api::Config::for_tests()).await;
     assert!(result.is_err());
 }
+
+#[sqlx::test(migrator = "api::MIGRATOR")]
+async fn login_is_rejected_with_429_when_concurrency_limit_is_full(pool: PgPool) {
+    seed_user(&pool).await;
+    let (app, state) = common::test_app_and_state(pool);
+
+    // Onnistunut kirjautuminen ensin: sen jälkeen kaikki permitit ovat taas
+    // vapaina, eli onnistumispolku ei vuoda permittiä.
+    let ok = common::post_json(&app, "/api/auth/login", &login_body(EMAIL, PASSWORD)).await;
+    assert_eq!(ok.status(), StatusCode::OK);
+    assert_eq!(
+        state.login_limit.available_permits(),
+        api::auth::LOGIN_MAX_CONCURRENT,
+        "onnistunut kirjautuminen ei saa vuotaa permittiä"
+    );
+
+    // Yksi permit vapaana: kirjautuminen toimii edelleen. Tämä sitoo rajan
+    // lukuun: jos LOGIN_MAX_CONCURRENT muuttuu, tämä tai 429-tapaus hajoaa.
+    let held_all_but_one = state
+        .login_limit
+        .try_acquire_many(api::auth::LOGIN_MAX_CONCURRENT as u32 - 1)
+        .expect("kaikkien permittien pitäisi olla vapaina");
+    let last_one = common::post_json(&app, "/api/auth/login", &login_body(EMAIL, PASSWORD)).await;
+    assert_eq!(last_one.status(), StatusCode::OK);
+    drop(held_all_but_one);
+
+    // Kaikki permitit varattuna testin puolelta: käsittelijä ei saa yhtään.
+    let held = state
+        .login_limit
+        .try_acquire_many(api::auth::LOGIN_MAX_CONCURRENT as u32)
+        .expect("kaikkien permittien pitäisi olla vapaina");
+
+    let busy = common::post_json(&app, "/api/auth/login", &login_body(EMAIL, PASSWORD)).await;
+    assert_eq!(busy.status(), StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(
+        busy.headers()
+            .get(header::RETRY_AFTER)
+            .expect("429 must carry Retry-After")
+            .to_str()
+            .unwrap(),
+        "1"
+    );
+    assert!(busy.headers().get(header::SET_COOKIE).is_none());
+    let body = common::body_json(busy).await;
+    assert_eq!(body["error"]["code"], "too_many_requests");
+
+    // Permitit vapautuvat -> kirjautuminen toimii taas.
+    drop(held);
+    let again = common::post_json(&app, "/api/auth/login", &login_body(EMAIL, PASSWORD)).await;
+    assert_eq!(again.status(), StatusCode::OK);
+}
