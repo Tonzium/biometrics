@@ -139,6 +139,11 @@ p {
   color: var(--brand);
   background: #fdecec;
 }
+/* Kuvakkeet ja lyhyet nimet kuuluvat vain mobiilin alapalkkiin. */
+.nav-icon,
+.nav-label-short {
+  display: none;
+}
 .topbar-user {
   display: flex;
   align-items: center;
@@ -530,6 +535,81 @@ select:focus {
 }
 .energy-protein {
   background: var(--green);
+}
+
+/* Päävalikon linkit vaativat 451 px; yläpalkkiin ne mahtuvat vasta noin
+   768 pikselistä alkaen. Sitä kapeammalla valikko siirtyy alapalkiksi. */
+@media (max-width: 767px) {
+  :root {
+    /* Alapalkin korkeus ilman ylärajan viivaa; .app varaa saman verran tilaa. */
+    --tabbar-h: 58px;
+  }
+  /* Päävalikko siirtyy yläpalkin ahtaasta vierityskaistasta peukalon
+     ulottuville alapalkiksi. Sama <nav> vain asemoidaan uudelleen. */
+  .nav {
+    position: fixed;
+    inset: auto 0 0 0;
+    flex: none;
+    gap: 0;
+    overflow: visible;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -1px 3px rgba(16, 24, 40, 0.08);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 20;
+  }
+  .nav .nav-link {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    min-height: var(--tabbar-h);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.4rem 0.2rem;
+    border-radius: 0;
+    font-size: 0.7rem;
+    text-align: center;
+  }
+  /* Täysikorkuinen pilleri näyttäisi palkissa oudolta; aktiivinen välilehti
+     merkitään värillä ja yläreunan viivalla. */
+  .nav .nav-link.active {
+    background: transparent;
+  }
+  .nav .nav-link.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 22%;
+    right: 22%;
+    height: 2px;
+    border-radius: 0 0 2px 2px;
+    background: var(--brand);
+  }
+  .nav .nav-icon {
+    display: block;
+    width: 22px;
+    height: 22px;
+  }
+  .nav .nav-label {
+    display: none;
+  }
+  .nav .nav-label-short {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Tilaa alapalkille, jottei se peitä sivun loppua eikä alatunnistetta. */
+  .app {
+    padding-bottom: calc(var(--tabbar-h) + 1px + env(safe-area-inset-bottom));
+  }
+  .topbar-user {
+    margin-left: auto;
+  }
 }
 
 @media (max-width: 640px) {

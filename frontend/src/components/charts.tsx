@@ -18,7 +18,7 @@ import {
 } from 'recharts'
 
 import type { CardioLoad, DailyActivity, DailyWellness, NightlyRecharge, SleepNight, WeeklySummary } from '../api/types'
-import { formatDuration, formatShortDate, parseIsoDuration } from '../lib/format'
+import { formatDuration, formatShortDate, isoWeek, parseIsoDuration } from '../lib/format'
 
 const COLORS = {
   red: '#d32f2f',
@@ -196,14 +196,4 @@ export function HrZonesChart({ zones }: { zones: unknown }) {
       </BarChart>
     </ResponsiveContainer>
   )
-}
-
-/** ISO-viikon numero päivämäärästä (maanantai). */
-function isoWeek(dateStr: string): number {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const date = new Date(Date.UTC(y!, m! - 1, d!))
-  const day = date.getUTCDay() || 7
-  date.setUTCDate(date.getUTCDate() + 4 - day)
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
-  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7)
 }

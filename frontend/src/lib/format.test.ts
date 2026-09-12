@@ -5,6 +5,7 @@ import {
   formatDistance,
   formatDuration,
   formatHours,
+  isoWeek,
   lastDays,
   parseIsoDuration,
   rechargeLabel,
@@ -54,6 +55,15 @@ describe('labels', () => {
     expect(rechargeLabel(null)).toBe('–')
     expect(cardioStatusLabel('PRODUCTIVE')).toBe('Tuottava')
     expect(cardioStatusLabel('SOMETHING_NEW')).toBe('SOMETHING_NEW')
+  })
+})
+
+describe('isoWeek', () => {
+  it('numbers weeks from their Monday', () => {
+    expect(isoWeek('2026-09-07')).toBe(37)
+    expect(isoWeek('2026-01-01')).toBe(1)
+    // 2026 alkaa torstaina, joten edellinen maanantai kuuluu vielä viikkoon 1.
+    expect(isoWeek('2025-12-29')).toBe(1)
   })
 })
 

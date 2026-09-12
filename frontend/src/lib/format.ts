@@ -29,6 +29,16 @@ export function formatWeekday(value: string): string {
   return weekdayFmt.format(parseDate(value))
 }
 
+/** ISO-viikon numero maanantain päivämäärästä (`2026-09-07` → `37`). */
+export function isoWeek(dateStr: string): number {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(Date.UTC(y!, m! - 1, d!))
+  const day = date.getUTCDay() || 7
+  date.setUTCDate(date.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
+  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7)
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return '–'
   return dateTimeFmt.format(new Date(value))

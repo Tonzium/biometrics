@@ -13,6 +13,7 @@ import {
   formatHours,
   formatLocalDateTime,
   formatNumber,
+  isoWeek,
   lastDays,
   rechargeLabel,
   sportLabel,
@@ -29,6 +30,8 @@ export function DashboardPage() {
 
   const o = overview.data
   const l = o.latest
+  // Viikkodata on nousevassa järjestyksessä, joten viimeinen rivi on kulumassa oleva viikko.
+  const week = weekly.data?.at(-1)
 
   if (!o.polar_connected || (o.exercises === 0 && o.sleep_nights === 0)) {
     return (
@@ -74,9 +77,15 @@ export function DashboardPage() {
         />
         <StatCard label="Harjoituskuorma" value={cardioStatusLabel(l.cardio_load_status)} accent="red" />
         <StatCard
-          label="Paino"
-          value={o.body_metrics_hidden ? 'Piilotettu' : l.weight_kg ? `${l.weight_kg.toLocaleString('fi-FI')} kg` : '–'}
-          hint={o.body_metrics_hidden ? 'näkyy vain kirjautuneille' : undefined}
+          label="Harjoitusaika"
+          value={week ? formatDuration(week.total_duration_s) : '–'}
+          hint={
+            week
+              ? `vk ${isoWeek(week.week_start)} · ${formatNumber(week.exercise_count)} ${
+                  week.exercise_count === 1 ? 'harjoitus' : 'harjoitusta'
+                }${week.total_distance_m ? ` · ${formatDistance(week.total_distance_m)}` : ''}`
+              : undefined
+          }
           accent="purple"
         />
         <StatCard
