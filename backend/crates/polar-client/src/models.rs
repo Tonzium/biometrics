@@ -147,11 +147,72 @@ pub struct NightlyRecharge {
     pub breathing_samples: Option<Value>,
 }
 
+/// Päiväaktiivisuuden aikaleimojen jäsennys.
+///
+/// Polar ei ole johdonmukainen tässä kentässä: tuotannossa `/v3/users/activities`
+/// palautti arvon, jonka chrono hylkäsi virheellä "premature end of input" (liian
+/// lyhyt täydeksi aikaleimaksi), ja kaikki 28 päivää jäivät hakematta kantaan.
+/// Swagger-kuvaus lupasi täyden aikaleiman, joten pelkkään kuvaukseen ei voi
+/// luottaa. Hyväksytään siis kaikki realistiset muodot: täysi aikaleima, pelkkä
+/// päivämäärä (klo 00:00:00), aikavyöhykkeellinen muoto ja välilyönnillä erotettu.
+/// Tuntematon muoto on edelleen virhe, eikä sitä vaienneta.
+mod flexible_naive {
+    use chrono::{DateTime, NaiveDate, NaiveDateTime};
+    use serde::{Deserialize, Deserializer, de::Error as _};
+
+    const FORMATS: [&str; 6] = [
+        "%Y-%m-%dT%H:%M:%S%.f",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S%.f",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%d %H:%M",
+    ];
+
+    pub(super) fn parse(raw: &str) -> Option<NaiveDateTime> {
+        let s = raw.trim();
+        // Aikavyöhyke pudotetaan tarkoituksella: päiväaktiivisuudessa merkitsee
+        // kellon paikallinen päivä, eikä rivillä ole offset-kenttää sen tallennukseen.
+        if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
+            return Some(dt.naive_local());
+        }
+        for format in FORMATS {
+            if let Ok(dt) = NaiveDateTime::parse_from_str(s, format) {
+                return Some(dt);
+            }
+        }
+        NaiveDate::parse_from_str(s, "%Y-%m-%d")
+            .ok()
+            .and_then(|d| d.and_hms_opt(0, 0, 0))
+    }
+
+    pub(super) fn deserialize<'de, D>(d: D) -> Result<NaiveDateTime, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = String::deserialize(d)?;
+        parse(&raw).ok_or_else(|| D::Error::custom(format!("unrecognised date-time {raw:?}")))
+    }
+
+    pub(super) fn deserialize_option<'de, D>(d: D) -> Result<Option<NaiveDateTime>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        match Option::<String>::deserialize(d)? {
+            None => Ok(None),
+            Some(raw) => parse(&raw)
+                .map(Some)
+                .ok_or_else(|| D::Error::custom(format!("unrecognised date-time {raw:?}"))),
+        }
+    }
+}
+
 /// `GET /v3/users/activities?from&to` -> `[ ... ]`
 #[derive(Debug, Clone, Deserialize)]
 pub struct DailyActivity {
+    #[serde(deserialize_with = "flexible_naive::deserialize")]
     pub start_time: NaiveDateTime,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "flexible_naive::deserialize_option")]
     pub end_time: Option<NaiveDateTime>,
     #[serde(default)]
     pub active_duration: Option<String>,
@@ -259,6 +320,36 @@ mod tests {
         .unwrap();
         assert_eq!(n.sleep_start_time.to_rfc3339(), "2026-09-01T20:10:00+00:00");
         assert_eq!(n.sleep_score, Some(81));
+    }
+
+    #[test]
+    fn activity_accepts_every_timestamp_shape_polar_sends() {
+        let cases = [
+            // (syöte, odotettu päivä)
+            ("2026-09-01T21:00:00", "2026-09-01"),
+            ("2026-09-01T21:00:00.500", "2026-09-01"),
+            ("2026-09-01 21:00:00", "2026-09-01"),
+            ("2026-09-01T21:00", "2026-09-01"),
+            // Tämä muoto kaatoi tuotannossa koko erän: pelkkä päivämäärä.
+            ("2026-09-01", "2026-09-01"),
+            // Aikavyöhykkeellinen: paikallinen kellonaika ratkaisee päivän.
+            ("2026-09-01T23:30:00+03:00", "2026-09-01"),
+        ];
+        for (input, expected) in cases {
+            let a: DailyActivity =
+                serde_json::from_value(serde_json::json!({ "start_time": input }))
+                    .unwrap_or_else(|e| panic!("{input:?} should parse: {e}"));
+            assert_eq!(a.date().to_string(), expected, "{input:?}");
+        }
+    }
+
+    #[test]
+    fn activity_rejects_a_timestamp_it_cannot_understand() {
+        let err = serde_json::from_value::<DailyActivity>(
+            serde_json::json!({ "start_time": "viime tiistaina" }),
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("unrecognised date-time"), "{err}");
     }
 
     #[test]

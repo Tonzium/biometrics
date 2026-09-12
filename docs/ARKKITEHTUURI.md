@@ -107,7 +107,9 @@ Palvelin ei tarvitse selainta eikä sisääntulevaa yhteyttä Polarilta.
 Yksi ajo kerrallaan (tokio `Mutex::try_lock`). Kuusi askelta (exercises, sleep, nightly-recharge,
 activities, physical-info, cardio-load); askeleen virhe kirjataan ja jatketaan, Polarin 429
 keskeyttää. Tulos `sync_runs`-tauluun: `ok` / `partial` / `failed`, määrät ja virheet.
-Yksittäinen jäsentymätön alkio ohitetaan varoituksella eikä kaada erää.
+Yksittäinen jäsentymätön alkio ohitetaan varoituksella eikä kaada erää, mutta jos koko erästä ei
+tallennu yhtään riviä, se kirjataan virheeksi ja ajon tila on `partial`. Varoitus sisältää raa'an
+alkion katkaistuna, jotta jäsennysvirheen syy näkyy lokista ilman arvailua.
 
 ## 5. Tietoturva
 

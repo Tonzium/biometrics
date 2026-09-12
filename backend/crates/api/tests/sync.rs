@@ -122,8 +122,9 @@ fn activities_fixture() -> serde_json::Value {
           "active_duration": "PT3H11M", "inactive_duration": "PT18H23M30S",
           "daily_activity": 89.1, "calories": 2500, "active_calories": 900, "steps": 8823,
           "inactivity_alert_count": 1, "distance_from_steps": 6590.5 },
-        { "start_time": "2026-09-08T00:00:00", "end_time": "2026-09-08T23:59:59",
-          "steps": 12000, "calories": 2800 }
+        // Pelkkä päivämäärä ilman kellonaikaa: tämä muoto hylättiin
+        // tuotannossa, joten se on nyt mukana kiinteänä osana erää.
+        { "start_time": "2026-09-08", "steps": 12000, "calories": 2800 }
     ])
 }
 
@@ -388,6 +389,43 @@ async fn unparseable_items_are_skipped_not_fatal(pool: PgPool) {
     assert_eq!(report["status"], "ok");
     assert_eq!(report["counts"]["exercises"], 1);
     assert_eq!(report["counts"]["skipped"], 2);
+}
+
+/// Jos koko erä jää jäsentymättä, ajo ei ole `ok`: tuotannossa kaikki 28
+/// aktiivisuuspäivää hylättiin ja raportti näytti silti onnistunutta.
+#[sqlx::test(migrator = "api::MIGRATOR")]
+async fn a_step_that_stores_nothing_is_partial_not_ok(pool: PgPool) {
+    seed_linked_owner(&pool).await;
+    let server = MockServer::start().await;
+    mount_all_ok(&server).await;
+    Mock::given(method("GET"))
+        .and(path("/v3/exercises"))
+        .respond_with(json_ok(serde_json::json!([
+            { "id": "BAD_1" },
+            { "id": "BAD_2" }
+        ])))
+        .with_priority(1)
+        .mount(&server)
+        .await;
+
+    let app = app_with_mock(pool.clone(), &server).await;
+    let session = login(&app).await;
+    let report = common::body_json(post_sync(&app, &session).await).await;
+
+    assert_eq!(report["status"], "partial", "{report}");
+    assert_eq!(report["counts"]["exercises"], 0);
+    assert_eq!(report["counts"]["skipped"], 2);
+    let errors = report["errors"].as_array().unwrap();
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.as_str().unwrap() == "exercises: fetched 2 items, stored none"),
+        "{report}"
+    );
+
+    // Muut datatyypit tallentuivat normaalisti, eli yksi hajonnut askel ei
+    // keskeytä ajoa.
+    assert_eq!(report["counts"]["sleep_nights"], 2);
 }
 
 #[sqlx::test(migrator = "api::MIGRATOR")]

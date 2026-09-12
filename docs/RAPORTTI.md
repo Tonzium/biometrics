@@ -101,6 +101,8 @@ ja jokainen vaihe verifioitiin testeillä ja oikeaa palvelinta vasten ennen comm
 | Dev-portti 8080 | Windowsissa Hyper-V varaa portin | Bind-virhe; vaihdettiin 8787 |
 | Polarin dev-redirect | Ehdotettu `localhost:8787` olisi pudottanut istuntocookien paluuohjauksessa | Huomattiin suunnittelussa; redirect Vite-proxyn kautta |
 | Windowsin rivinvaihdot | Shell-skriptit olisivat tallentuneet CRLF-muodossa ja rikkoutuneet Linuxissa | Gitin varoitus; `.gitattributes` pakottaa LF:n |
+| Päiväaktiivisuuden aikaleima | Malli odotti täyttä aikaleimaa Polarin Swagger-kuvauksen mukaan, mutta tuotannossa kenttä oli lyhyempi: chrono hylkäsi sen ("premature end of input") ja kaikki 28 päivää jäivät hakematta | Tuotantolokista; jäsennys hyväksyy nyt myös pelkän päivämäärän, ja lokiin kirjoitetaan raaka alkio. Opetus: rajapinnan kuvaus ei ole todiste siitä, mitä rajapinta lähettää |
+| Synkronoinnin tila | Ajo näytti `ok`-tilaa, vaikka yhden datatyypin kaikki alkiot hylättiin: virheeksi laskettiin vain askeleen kaatuminen, ei alkioiden ohittaminen | Huomattiin vasta tuotantodataa katsomalla; nyt erä, josta ei tallennu yhtään riviä, on virhe ja tila `partial` |
 
 Yhteinen havainto: tekoäly tuotti toimivan rungon nopeasti, mutta jokainen integraatiopiste
 (kirjasto, CI, käyttöjärjestelmä, ulkoinen API) vaati todellisen ajon ja usein korjauksen.

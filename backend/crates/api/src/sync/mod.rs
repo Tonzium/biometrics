@@ -180,6 +180,7 @@ pub async fn run_sync(
                     Err(e) => {
                         counts.skipped += 1;
                         tracing::warn!(error = %e, "physical_info: upsert failed");
+                        errors.push("physical_info: fetched 1 item, stored none".to_owned());
                     }
                 }
             }
@@ -273,6 +274,8 @@ async fn apply_batch<T: Upsertable>(
         Err(e) => return record_error(name, e, errors),
     };
     *skipped += batch.skipped;
+    let fetched_count = batch.items.len() + batch.skipped as usize;
+    let before = *upserted;
     for item in &batch.items {
         match T::upsert(pool, account_id, item).await {
             Ok(()) => *upserted += 1,
@@ -281,6 +284,17 @@ async fn apply_batch<T: Upsertable>(
                 tracing::warn!(resource = name, error = %e, "upsert failed, item skipped");
             }
         }
+    }
+
+    // Polar palautti dataa, mutta yksikään rivi ei päätynyt kantaan: askel
+    // epäonnistui kokonaan, vaikka yksittäiset alkiot "vain ohitettiin".
+    // Ilman tätä ajon tila olisi `ok` ja koko datatyypin katoaminen näyttäisi
+    // onnistumiselta sekä raportissa että asetussivun historiassa — juuri näin
+    // kävi tuotannossa, kun kaikki 28 aktiivisuuspäivää hylättiin.
+    if *upserted == before && fetched_count > 0 {
+        errors.push(format!(
+            "{name}: fetched {fetched_count} items, stored none"
+        ));
     }
     tracing::debug!(
         resource = name,

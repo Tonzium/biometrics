@@ -131,7 +131,11 @@ fn parse_batch<T: DeserializeOwned>(what: &str, values: Vec<Value>) -> Batch<T> 
             Ok(data) => batch.items.push(Fetched { data, raw }),
             Err(e) => {
                 batch.skipped += 1;
-                tracing::warn!(resource = what, error = %e, "skipping unparseable item");
+                // Raaka alkio mukaan (katkaistuna): pelkkä virheteksti, esim.
+                // chronon "premature end of input", ei kerro mikä kenttä oli
+                // väärässä muodossa eikä mitä Polar oikeasti lähetti.
+                let item: String = raw.to_string().chars().take(500).collect();
+                tracing::warn!(resource = what, error = %e, %item, "skipping unparseable item");
             }
         }
     }
