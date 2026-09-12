@@ -197,7 +197,7 @@ Tuotanto ajetaan kotipalvelimen Proxmox-kontissa `pve2`, johon asennetaan Docker
 | Palvelu | Image | Portit | Huomiot |
 |---|---|---|---|
 | `db` | postgres:18-alpine | ei julkaistu | nimetty volume `pgdata`, healthcheck `pg_isready` |
-| `api` | `ghcr.io/<owner>/<repo>-api` (CI rakentaa: rust:1.98 → debian-slim) | ei julkaistu | lukee `.env`:n, `depends_on: db: condition: service_healthy` |
+| `api` | `ghcr.io/<owner>/<repo>-api` (CI rakentaa: rust:1.98 → debian-slim) | ei julkaistu | saa vain nimetyllä listalla olevat ympäristömuuttujat (ei `env_file`, joten tunnelin token ei päädy api-prosessiin), `depends_on: db: condition: service_healthy` |
 | `web` | `ghcr.io/<owner>/<repo>-web` (CI rakentaa: node:24 → nginx:alpine) | ei julkaistu | staattinen build + `/api` proxy |
 | `cloudflared` | cloudflare/cloudflared | ei julkaistu | `tunnel run`, token `.env`:stä; ingress (`biometrics.tonikiuru.com` → `http://web:80`) määritellään Cloudflaren hallintapaneelissa, joten erillistä config.yml:ää ei tarvita |
 

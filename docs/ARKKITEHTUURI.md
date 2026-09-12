@@ -87,6 +87,13 @@ kysely hakee ensimmäisen Polar-tilin datan, vastauksesta on jätetty pois tunni
 **Kirjautuminen.** `POST /api/auth/login` → argon2id-vertailu (myös tuntemattomalle
 sähköpostille valetiivistettä vasten, jotta vasteaika ei paljasta käyttäjän olemassaoloa) → JWT
 (HS256, 7 vrk) httpOnly-cookieen `pdh_session`, `SameSite=Lax`, `Secure` tuotannossa.
+Rinnakkaisia vertailuja on enintään `LOGIN_MAX_CONCURRENT` (2, tokion `Semaphore`): yksi vertailu
+maksaa release-buildissa ~10 ms CPU-aikaa ja varaa 19 MiB muistia, ja koska laskenta ajetaan tokion
+blokkaavassa säiepoolissa (512 paikkaa), rajaton tulva yrittäisi varata luokkaa 9 GiB muistia.
+Rajan täyttyessä pyyntö hylätään heti 429:llä ja `Retry-After`-otsakkeella ennen kantakyselyä.
+Mitattu 40 rinnakkaisella pyynnöllä: 2 vertailua ajettiin, 38 hylättiin ~10 ms:ssa ilman laskentaa.
+Permit siirtyy `spawn_blocking`-tehtävään: katkaistu yhteys ei saa vapauttaa sitä ennen kuin
+laskenta on todella ohi, koska blokkaavaa tehtävää ei voi keskeyttää.
 
 **Polar-yhdistys (OAuth2 authorization code).**
 1. `GET /api/polar/connect` (omistaja): satunnainen `state` 10 min cookieen, 303 → flow.polar.com.
@@ -107,6 +114,7 @@ Yksittäinen jäsentymätön alkio ohitetaan varoituksella eikä kaada erää.
 | Aihe | Ratkaisu |
 |---|---|
 | Salasanat | argon2id (PHC-merkkijono), laskenta `spawn_blocking`-säikeessä |
+| Kirjautumistulva | enintään 2 rinnakkaista salasanatarkistusta (`Semaphore`), ylimenevät heti 429 + `Retry-After`. Suojaa CPU:n ja muistin, mutta ei saatavuutta: tulvan aikana myös omistajan oma kirjautuminen voi saada 429:n. Per-IP-rajaus kuuluu Cloudflaren rate limiting -sääntöön, joka pysäyttää tulvan ennen originia |
 | Istunto | JWT httpOnly-cookiessa; JS ei näe sitä. `SameSite=Lax` estää cross-site POSTin (CSRF), mutta sallii OAuth-paluuohjauksen (top-level GET) |
 | OAuth CSRF | `state`-parametri satunnaisesta 32 tavusta, verrataan cookieen, cookie poistetaan aina |
 | Polar-token levossa | AES-256-GCM, avain `APP_ENCRYPTION_KEY`, nonce tallennetaan salatekstin eteen |
@@ -114,11 +122,19 @@ Yksittäinen jäsentymätön alkio ohitetaan varoituksella eikä kaada erää.
 | Salaisuudet | vain `.env`-tiedostossa (git-ignoroitu, `chmod 600`); ei koodissa, ei imageissa, ei lokeissa |
 | Roolit | `owner` saa yhdistää ja synkronoida; `viewer` vain lukee. Rekisteröintiä ei ole. |
 | Julkinen data | vastauksista poistettu Polar-käyttäjä-id, laite-id:t, tilien id:t, raaka JSON. GPS-reittejä ei tuoda kantaan. Paino ja pituus näytetään vain kirjautuneille (`PUBLIC_BODY_METRICS=false`, oletus); backend palauttaa ne `null`-arvoina, joten data ei lähde palvelimelta. |
+| Selainotsakkeet | nginx lisää jokaiseen vastaukseen CSP:n (`script-src 'self'`, ei inline-skriptejä), HSTS:n, `nosniff`in, `X-Frame-Options: DENY`in, Referrer- ja Permissions-Policyn sekä COOP/CORP:n (`frontend/security-headers.conf`) |
+| Ympäristömuuttujat | api saa vain nimetyllä listalla olevat muuttujat (ei `env_file`), joten tunnelin token ei ole api-prosessin ympäristössä; CI tarkistaa, ettei lista pääse vanhenemaan |
 | Verkko | ei avoimia portteja; TLS Cloudflaressa; kontit ajetaan ei-root-käyttäjänä |
 | Rajoitus | `PUBLIC_READ=false` tai Cloudflare Access sulkee sivuston kirjautumisen taakse |
 
-Tietoisesti tekemättä: kirjautumisen rate limit (yksi käyttäjä, vahva salasana, Cloudflare
-edessä), refresh-tokenit (7 vrk istunto riittää), Polar-webhookit (ajastin riittää).
+Katselmoinnin löydökset, tehdyt korjaukset ja avoimet kohdat: [TIETOTURVA.md](TIETOTURVA.md).
+
+Tietoisesti tekemättä: per-IP-rate limit sovelluksessa (kirjautumisen rinnakkaisuusraja suojaa
+CPU:n, ja per-IP-rajaus tehdään Cloudflaressa, jossa tulva pysähtyy ennen originia),
+refresh-tokenit (7 vrk istunto riittää), istunnon mitätöinti palvelimelta (vaatisi
+istuntotaulun tai `token_version`-kentän; nyt ainoa keino on vaihtaa `JWT_SECRET`),
+Polar-webhookit (ajastin riittää). HSTS ei yksin estä protokollan alasajoa: selain lukee sen
+vain HTTPS-vastauksesta, joten http → https -ohjaus on kytkettävä päälle Cloudflaressa.
 
 ## 6. Päätökset (ADR)
 

@@ -96,7 +96,7 @@ ja jokainen vaihe verifioitiin testeillä ja oikeaa palvelinta vasten ennen comm
 | Sync-moottorin sulkeumat | Ensimmäinen toteutus ei kääntynyt (`Send is not general enough`) | Kääntäjä; korjattiin trait-pohjaisella ratkaisulla (ADR-8) |
 | Postgresin `avg()` | Viikkonäkymän keskiarvot olivat `numeric`, jota sqlx ei tue ilman lisäfeaturea | Käännösvirhe; lisättiin migraatio, joka castaa `double precision`iksi |
 | CI:n testivaihe | Kyselymakrot käännettiin tyhjää palvelukantaa vasten | CI kaatui; lisättiin `SQLX_OFFLINE=true` |
-| CI:n compose-validointi | `env_file` vaati `.env`-tiedostoa, jota CI:ssä ei ole | CI kaatui; validointi kopioi esimerkkitiedoston |
+| CI:n compose-validointi | `env_file` vaati `.env`-tiedostoa, jota CI:ssä ei ole | CI kaatui; validointi kopioi esimerkkitiedoston. Kun api vaihdettiin nimettyyn muuttujalistaan (ei `env_file`), kopiota ei enää tarvita lainkaan |
 | Logout-cookie | `CookieJar::remove` ei lähetä poistocookieta, jos pyynnössä ei ollut cookieta | Integraatiotesti kaatui; vaihdettiin `add` + `Max-Age=0` |
 | Dev-portti 8080 | Windowsissa Hyper-V varaa portin | Bind-virhe; vaihdettiin 8787 |
 | Polarin dev-redirect | Ehdotettu `localhost:8787` olisi pudottanut istuntocookien paluuohjauksessa | Huomattiin suunnittelussa; redirect Vite-proxyn kautta |
