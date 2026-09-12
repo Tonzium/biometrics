@@ -1,0 +1,51 @@
+# Dependabot avaa pull requestin, kun riippuvuuteen tulee päivitys. Tärkein
+# tehtävä tässä projektissa on pitää CI:n actionit ajan tasalla: ne on
+# kiinnitetty commitin SHA:han (ks. workflows/ci.yml), joten ilman Dependabotia
+# ne jäisivät päivittymättä eikä tietoturvakorjauksia huomattaisi.
+#
+# Kaikki PR:t ajavat saman CI:n kuin muutkin muutokset, joten päivitys ei mene
+# läpi rikkomatta testejä. cargo audit ja npm audit CI:ssä kertovat erikseen,
+# jos jokin nykyinen versio on haavoittuva.
+version: 2
+
+updates:
+  # GitHub Actions: päivittää sekä SHA:n että perässä olevan versiokommentin.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci"
+
+  # Rust-riippuvuudet (backend/Cargo.toml + Cargo.lock).
+  - package-ecosystem: cargo
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "backend"
+
+  # Frontendin npm-riippuvuudet.
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "frontend"
+
+  # Dockerfilejen pohjaimaget (rust, debian, node, nginx).
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "backend"
+
+  - package-ecosystem: docker
+    directory: /frontend
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "frontend"

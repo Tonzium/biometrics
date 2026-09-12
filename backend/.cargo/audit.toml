@@ -1,0 +1,16 @@
+# cargo-auditin asetukset. Luetaan, kun `cargo audit` ajetaan tästä
+# workspacesta (myös CI:ssä, ks. .github/workflows/ci.yml).
+
+[advisories]
+# Tietoisesti ohitetut löydökset. Jokaiselle on oltava peruste, ja peruste on
+# tarkistettava uudelleen, jos riippuvuudet muuttuvat.
+#
+# RUSTSEC-2023-0071 (rsa 0.9.x, "Marvin Attack": ajoitusvuoto, joka voi
+# paljastaa RSA-yksityisavaimen). Korjattua versiota ei ole julkaistu.
+# Ei koske tätä sovellusta: rsa tulee mukaan vain jsonwebtokenin
+# riippuvuutena, ja sovellus allekirjoittaa ja tarkistaa istuntotokenit
+# HS256:lla (symmetrinen HMAC). RSA-koodia ei ajeta, eikä sovelluksella ole
+# RSA-avaimia. Tarkistettavaksi uudelleen, jos jsonwebtokenin versio vaihtuu
+# tai jokin reitti alkaa käyttää RS256:ta.
+#   cargo tree -i rsa   näyttää ketjun.
+ignore = ["RUSTSEC-2023-0071"]

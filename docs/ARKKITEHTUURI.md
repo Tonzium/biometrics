@@ -124,6 +124,7 @@ Yksittäinen jäsentymätön alkio ohitetaan varoituksella eikä kaada erää.
 | Julkinen data | vastauksista poistettu Polar-käyttäjä-id, laite-id:t, tilien id:t, raaka JSON. GPS-reittejä ei tuoda kantaan. Paino ja pituus näytetään vain kirjautuneille (`PUBLIC_BODY_METRICS=false`, oletus); backend palauttaa ne `null`-arvoina, joten data ei lähde palvelimelta. |
 | Selainotsakkeet | nginx lisää jokaiseen vastaukseen CSP:n (`script-src 'self'`, ei inline-skriptejä), HSTS:n, `nosniff`in, `X-Frame-Options: DENY`in, Referrer- ja Permissions-Policyn sekä COOP/CORP:n (`frontend/security-headers.conf`) |
 | Ympäristömuuttujat | api saa vain nimetyllä listalla olevat muuttujat (ei `env_file`), joten tunnelin token ei ole api-prosessin ympäristössä; CI tarkistaa, ettei lista pääse vanhenemaan |
+| Toimitusketju | CI:n actionit kiinnitetty commitin SHA:han, työnkulun oletusoikeus `contents: read`, `cargo audit` ja `npm audit` putkessa, Dependabot päivittää riippuvuudet |
 | Verkko | ei avoimia portteja; TLS Cloudflaressa; kontit ajetaan ei-root-käyttäjänä |
 | Rajoitus | `PUBLIC_READ=false` tai Cloudflare Access sulkee sivuston kirjautumisen taakse |
 
