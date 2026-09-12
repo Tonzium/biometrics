@@ -63,12 +63,13 @@ async fn login(
     // Verify ajetaan aina, myös tuntemattomalle käyttäjälle (ajoituspuolustus).
     let ok = password::verify(req.password, stored_hash, permit).await?;
     let Some(record) = record.filter(|_| ok) else {
-        tracing::info!(%email, "failed login attempt");
+        tracing::info!(email = ?email, "failed login attempt");
         return Err(ApiError::Unauthorized);
     };
 
+    let token_version = record.token_version;
     let user = record.into_user();
-    let token = jwt::issue(&state.config, &user)?;
+    let token = jwt::issue(&state.config, &user, token_version)?;
     let jar = jar.add(auth::session_cookie(&state.config, token));
     tracing::info!(user = %user.email, "login");
     Ok((jar, Json(user)))

@@ -46,10 +46,27 @@ impl FromRequestParts<AppState> for CurrentUser {
             ApiError::Unauthorized
         })?;
 
+        // Allekirjoitus ja vanhenemisaika eivät kerro kaikkea: tokenin takana
+        // oleva käyttäjä voi olla poistettu, rooli vaihdettu tai istunnot
+        // mitätöity palvelimelta. Haetaan käyttäjä joka pyynnöllä (yksi
+        // perusavainkysely) ja luotetaan kantaan, ei tokenin sisältöön.
+        let record = crate::db::users::find_by_id(&state.pool, claims.sub)
+            .await?
+            .ok_or(ApiError::Unauthorized)?;
+
+        // Istuntoversio tokenissa vs. kannassa. Luku eikä aikaleima, koska
+        // `iat` on vain sekunnin tarkkuudella: aikaleimavertailu olisi
+        // epämääräinen kuluvan sekunnin sisällä.
+        if claims.ver != record.token_version {
+            tracing::debug!(user = ?record.email, "session invalidated on the server");
+            return Err(ApiError::Unauthorized);
+        }
+
+        let user = record.into_user();
         Ok(Self {
-            id: claims.sub,
-            email: claims.email,
-            role: claims.role,
+            id: user.id,
+            email: user.email,
+            role: user.role,
         })
     }
 }

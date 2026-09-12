@@ -137,7 +137,7 @@ async fn list_exercises(
         q.to,
         sport,
         i64::from(per_page),
-        i64::from((page - 1) * per_page)
+        i64::from(page - 1) * i64::from(per_page)
     )
     .fetch_all(&state.pool)
     .await?;

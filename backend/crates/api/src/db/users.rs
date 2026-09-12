@@ -11,6 +11,9 @@ pub struct UserRecord {
     pub password_hash: String,
     pub role: String,
     pub created_at: DateTime<Utc>,
+    /// Istuntoversio. Tokenissa kulkee sama luku; kannassa kasvatettu arvo
+    /// mitätöi kaikki aiemmin myönnetyt tokenit (migraatio 0006).
+    pub token_version: i32,
 }
 
 impl UserRecord {
@@ -35,7 +38,8 @@ pub async fn count(pool: &PgPool) -> sqlx::Result<i64> {
 pub async fn find_by_email(pool: &PgPool, email: &str) -> sqlx::Result<Option<UserRecord>> {
     sqlx::query_as!(
         UserRecord,
-        "SELECT id, email, password_hash, role, created_at FROM app_users WHERE email = $1",
+        "SELECT id, email, password_hash, role, created_at, token_version
+         FROM app_users WHERE email = $1",
         email.to_lowercase()
     )
     .fetch_optional(pool)
@@ -45,11 +49,26 @@ pub async fn find_by_email(pool: &PgPool, email: &str) -> sqlx::Result<Option<Us
 pub async fn find_by_id(pool: &PgPool, id: Uuid) -> sqlx::Result<Option<UserRecord>> {
     sqlx::query_as!(
         UserRecord,
-        "SELECT id, email, password_hash, role, created_at FROM app_users WHERE id = $1",
+        "SELECT id, email, password_hash, role, created_at, token_version
+         FROM app_users WHERE id = $1",
         id
     )
     .fetch_optional(pool)
     .await
+}
+
+/// Mitätöi kaikki käyttäjän istunnot kasvattamalla istuntoversiota. Tämän
+/// jälkeen aiemmin myönnetyt tokenit hylätään, vaikka ne eivät ole
+/// vanhentuneet, ja uusi kirjautuminen toimii heti. Ylläpitotoimi, ei reittiä:
+/// ks. docs/TIETOTURVA.md.
+pub async fn invalidate_sessions(pool: &PgPool, id: Uuid) -> sqlx::Result<u64> {
+    let result = sqlx::query!(
+        "UPDATE app_users SET token_version = token_version + 1 WHERE id = $1",
+        id
+    )
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected())
 }
 
 pub async fn insert(
@@ -62,7 +81,7 @@ pub async fn insert(
         UserRecord,
         "INSERT INTO app_users (email, password_hash, role)
          VALUES ($1, $2, $3)
-         RETURNING id, email, password_hash, role, created_at",
+         RETURNING id, email, password_hash, role, created_at, token_version",
         email.to_lowercase(),
         password_hash,
         role.as_str()

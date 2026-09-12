@@ -114,8 +114,8 @@ Yksittäinen jäsentymätön alkio ohitetaan varoituksella eikä kaada erää.
 | Aihe | Ratkaisu |
 |---|---|
 | Salasanat | argon2id (PHC-merkkijono), laskenta `spawn_blocking`-säikeessä |
-| Kirjautumistulva | enintään 2 rinnakkaista salasanatarkistusta (`Semaphore`), ylimenevät heti 429 + `Retry-After`. Suojaa CPU:n ja muistin, mutta ei saatavuutta: tulvan aikana myös omistajan oma kirjautuminen voi saada 429:n. Per-IP-rajaus kuuluu Cloudflaren rate limiting -sääntöön, joka pysäyttää tulvan ennen originia |
-| Istunto | JWT httpOnly-cookiessa; JS ei näe sitä. `SameSite=Lax` estää cross-site POSTin (CSRF), mutta sallii OAuth-paluuohjauksen (top-level GET) |
+| Kirjautumistulva | kaksi kerrosta: nginx rajaa kirjautumiset 10/min per IP (`limit_req`, kohdistus `map`-muuttujalla) ja sovellus sallii enintään 2 rinnakkaista salasanatarkistusta (`Semaphore`). Molemmat vastaavat 429 + `Retry-After`. IP-kohtainen raja pitää yhden lähteen tulvan pois muiden tieltä; rinnakkaisuusraja on viimeinen suoja CPU:lle ja muistille myös hajautetussa tulvassa |
+| Istunto | JWT httpOnly-cookiessa; JS ei näe sitä. `SameSite=Lax` estää cross-site POSTin (CSRF), mutta sallii OAuth-paluuohjauksen (top-level GET). Jokainen suojattu pyyntö hakee käyttäjän kannasta ja vertaa tokenin `ver`-kenttää `token_version`-sarakkeeseen, joten istunnot voi mitätöidä palvelimelta ja poistetun käyttäjän token lakkaa toimimasta heti |
 | OAuth CSRF | `state`-parametri satunnaisesta 32 tavusta, verrataan cookieen, cookie poistetaan aina |
 | Polar-token levossa | AES-256-GCM, avain `APP_ENCRYPTION_KEY`, nonce tallennetaan salatekstin eteen |
 | SQL-injektio | kaikki kyselyt parametrisoituja `sqlx::query!`-makroja; ainoa dynaaminen SQL on testeissä ja merkitty `AssertSqlSafe` |
@@ -123,19 +123,21 @@ Yksittäinen jäsentymätön alkio ohitetaan varoituksella eikä kaada erää.
 | Roolit | `owner` saa yhdistää ja synkronoida; `viewer` vain lukee. Rekisteröintiä ei ole. |
 | Julkinen data | vastauksista poistettu Polar-käyttäjä-id, laite-id:t, tilien id:t, raaka JSON. GPS-reittejä ei tuoda kantaan. Paino ja pituus näytetään vain kirjautuneille (`PUBLIC_BODY_METRICS=false`, oletus); backend palauttaa ne `null`-arvoina, joten data ei lähde palvelimelta. |
 | Selainotsakkeet | nginx lisää jokaiseen vastaukseen CSP:n (`script-src 'self'`, ei inline-skriptejä), HSTS:n, `nosniff`in, `X-Frame-Options: DENY`in, Referrer- ja Permissions-Policyn sekä COOP/CORP:n (`frontend/security-headers.conf`) |
+| HTTPS | nginx ohjaa 301:llä https:ään, jos `CF-Visitor` kertoo selaimen tulleen http:llä. Origin näkee tunnelista aina HTTP:n, joten `$scheme` ei kerro mitään. Tämä on varmistus Cloudflaren "Always Use HTTPS" -asetukselle, ei sen korvike |
 | Ympäristömuuttujat | api saa vain nimetyllä listalla olevat muuttujat (ei `env_file`), joten tunnelin token ei ole api-prosessin ympäristössä; CI tarkistaa, ettei lista pääse vanhenemaan |
 | Toimitusketju | CI:n actionit kiinnitetty commitin SHA:han, työnkulun oletusoikeus `contents: read`, `cargo audit` ja `npm audit` putkessa, Dependabot päivittää riippuvuudet |
-| Verkko | ei avoimia portteja; TLS Cloudflaressa; kontit ajetaan ei-root-käyttäjänä |
+| Verkko | ei avoimia portteja; TLS Cloudflaressa |
+| Konttien oikeudet | kaikilla `no-new-privileges`; api ja cloudflared `cap_drop: ALL`; web pudottaa kaikki paitsi neljä nginxin tarvitsemaa. api-prosessi ajaa ei-root-käyttäjänä (uid 10001) |
 | Rajoitus | `PUBLIC_READ=false` tai Cloudflare Access sulkee sivuston kirjautumisen taakse |
 
 Katselmoinnin löydökset, tehdyt korjaukset ja avoimet kohdat: [TIETOTURVA.md](TIETOTURVA.md).
 
-Tietoisesti tekemättä: per-IP-rate limit sovelluksessa (kirjautumisen rinnakkaisuusraja suojaa
-CPU:n, ja per-IP-rajaus tehdään Cloudflaressa, jossa tulva pysähtyy ennen originia),
-refresh-tokenit (7 vrk istunto riittää), istunnon mitätöinti palvelimelta (vaatisi
-istuntotaulun tai `token_version`-kentän; nyt ainoa keino on vaihtaa `JWT_SECRET`),
-Polar-webhookit (ajastin riittää). HSTS ei yksin estä protokollan alasajoa: selain lukee sen
-vain HTTPS-vastauksesta, joten http → https -ohjaus on kytkettävä päälle Cloudflaressa.
+Tietoisesti tekemättä: refresh-tokenit (7 vrk istunto riittää yhdelle käyttäjälle),
+Polar-webhookit (ajastin riittää), täysin ei-root nginx (`nginx-unprivileged` kuuntelisi porttia
+8080, mikä vaatisi muutoksen myös Cloudflaren tunnelin kohteeseen) ja oma ei-superuser-rooli
+kannassa (kyselyt ovat kaikki parametrisoituja, joten tämä olisi vain syvyyssuuntaista suojaa).
+Cloudflaren päässä tehtäväksi jää "Always Use HTTPS" ja halutessa rate limiting -sääntö, joka
+pysäyttää tulvan jo ennen originia.
 
 ## 6. Päätökset (ADR)
 

@@ -25,6 +25,11 @@ services:
   db:
     image: postgres:18-alpine
     restart: unless-stopped
+    # Prosessi ei voi hankkia lisäoikeuksia setuid-binäärillä. Tämä on turvassa
+    # kaikille palveluille; kyvykkyyksiä (cap_drop) ei karsita db:ltä, koska
+    # postgres-image tarvitsee niitä datahakemiston omistajan vaihtoon.
+    security_opt:
+      - no-new-privileges:true
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-polar}
       POSTGRES_USER: ${POSTGRES_USER:-polar}
@@ -42,6 +47,12 @@ services:
     image: ${IMAGE_PREFIX:-ghcr.io/tonzium/biometrics}-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     logging: *logging
+    # api ajaa jo ei-root-käyttäjänä (uid 10001) ja kuuntelee porttia 8080,
+    # joten se ei tarvitse yhtään Linux-kyvykkyyttä.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     # Nimetty lista muuttujista, jotka api-prosessi saa. Tässä oli ennen
     # `env_file: .env`, jolloin KOKO deploy/.env valui api-prosessiin – myös
     # CLOUDFLARE_TUNNEL_TOKEN. Sillä tokenilla api:n kaapannut hyökkääjä voisi
@@ -94,6 +105,20 @@ services:
     image: ${IMAGE_PREFIX:-ghcr.io/tonzium/biometrics}-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     logging: *logging
+    # nginx-image käynnistyy rootina, pudottaa työprosessit nginx-käyttäjälle ja
+    # kuuntelee porttia 80, joten se tarvitsee näistä neljä kyvykkyyttä; loput
+    # pudotetaan. Täysin ei-root nginx vaatisi nginx-unprivileged-imagen ja
+    # portin 8080, mikä tarkoittaisi muutosta myös Cloudflaren tunneliin
+    # (public hostname osoittaa nyt kohteeseen web:80).
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
     depends_on:
       api:
         condition: service_healthy
@@ -104,6 +129,10 @@ services:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     environment:
       # Tyhjä token kaataa vain cloudflared-kontin (näkyy lokissa), ei koko pinoa.
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}

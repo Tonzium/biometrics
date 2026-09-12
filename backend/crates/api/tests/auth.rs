@@ -174,6 +174,57 @@ async fn seed_fails_loudly_without_credentials(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "api::MIGRATOR")]
+async fn sessions_can_be_invalidated_on_the_server(pool: PgPool) {
+    seed_user(&pool).await;
+    let app = common::test_app(pool.clone());
+
+    let login = common::post_json(&app, "/api/auth/login", &login_body(EMAIL, PASSWORD)).await;
+    let cookie = common::session_cookie(&login);
+    let before = common::get_with_cookie(&app, "/api/auth/me", &cookie).await;
+    assert_eq!(before.status(), StatusCode::OK);
+
+    // Ylläpitotoimi: kasvata istuntoversiota.
+    let user = api::db::users::find_by_email(&pool, EMAIL)
+        .await
+        .unwrap()
+        .expect("seeded user");
+    let affected = api::db::users::invalidate_sessions(&pool, user.id)
+        .await
+        .unwrap();
+    assert_eq!(affected, 1);
+
+    // Sama cookie ei enää kelpaa, vaikka token ei ole vanhentunut.
+    let after = common::get_with_cookie(&app, "/api/auth/me", &cookie).await;
+    assert_eq!(after.status(), StatusCode::UNAUTHORIZED);
+
+    // Uusi kirjautuminen toimii heti.
+    let again = common::post_json(&app, "/api/auth/login", &login_body(EMAIL, PASSWORD)).await;
+    assert_eq!(again.status(), StatusCode::OK);
+    let fresh = common::session_cookie(&again);
+    let ok = common::get_with_cookie(&app, "/api/auth/me", &fresh).await;
+    assert_eq!(ok.status(), StatusCode::OK);
+}
+
+#[sqlx::test(migrator = "api::MIGRATOR")]
+async fn deleted_user_cannot_use_an_existing_session(pool: PgPool) {
+    seed_user(&pool).await;
+    let app = common::test_app(pool.clone());
+
+    let login = common::post_json(&app, "/api/auth/login", &login_body(EMAIL, PASSWORD)).await;
+    let cookie = common::session_cookie(&login);
+
+    // Muut testit käyttävät samaa ei-makro-muotoa: makro vaatisi
+    // kyselyn myös .sqlx-offline-dataan, jota prepare ei kerää testeistä.
+    sqlx::query("DELETE FROM app_users")
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let after = common::get_with_cookie(&app, "/api/auth/me", &cookie).await;
+    assert_eq!(after.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test(migrator = "api::MIGRATOR")]
 async fn login_is_rejected_with_429_when_concurrency_limit_is_full(pool: PgPool) {
     seed_user(&pool).await;
     let (app, state) = common::test_app_and_state(pool);
