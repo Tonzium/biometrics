@@ -243,6 +243,27 @@ async fn ranged_lists_default_to_30_days_and_validate(pool: PgPool) {
     assert_eq!(physical[0]["resting_heart_rate"], 47);
 }
 
+/// Regressio: `to` NaiveDaten alarajalla (`-262143-01-01`) panikoi käsittelijän,
+/// koska 30 päivän oletusalku laskettiin siitä vähentämällä ilman tarkistusta.
+/// Panic katkaisi yhteyden (nginx vastasi 502) ja jätti pinon api:n lokiin,
+/// eikä pyyntö vaatinut kirjautumista. Nyt vastaus on tavallinen 400.
+#[sqlx::test(migrator = "api::MIGRATOR")]
+async fn out_of_range_to_is_a_bad_request_not_a_panic(pool: PgPool) {
+    seed(&pool).await;
+    let app = common::test_app(pool);
+
+    for uri in [
+        "/api/sleep?to=-262143-01-01",
+        "/api/recharge?to=-262143-01-01",
+        "/api/activity?to=-262143-01-01",
+        "/api/cardio-load?to=-262143-01-01",
+        "/api/summary/daily?to=-262143-01-01",
+    ] {
+        let response = common::get(&app, uri).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{uri}");
+    }
+}
+
 #[sqlx::test(migrator = "api::MIGRATOR")]
 async fn summaries_reflect_seeded_data(pool: PgPool) {
     seed(&pool).await;

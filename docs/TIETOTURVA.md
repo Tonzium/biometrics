@@ -7,9 +7,11 @@ staattiset tiedostot, DNS). Sovelluskoodista ei löytynyt injektiota, autentikoi
 salaisuuksien vuotoa eikä palvelimen IP-osoitteen paljastumista; löydökset koskivat pääosin
 palvelun reunaa ja käyttöä.
 
-Löydökset korjattiin 11.–12.9.2026. Tämä dokumentti on yksi luku löydöstä kohti: mikä oli
-ongelma, mitä tehtiin, missä tiedostoissa ja miten korjaus todennettiin. Katselmoinnin
-täysimittaista raporttia ei ole tässä repossa, koska repo on julkinen.
+Löydökset korjattiin 11.–12.9.2026. Jälkikatselmointi 16.9.2026 kävi koodin, julkaisun ja
+git-historian uudelleen läpi: yksi uusi löydös (päivämäärävälin alivuoto, luku 8), muut kohdat
+ennallaan. Tämä dokumentti on yksi luku löydöstä kohti: mikä oli ongelma, mitä tehtiin, missä
+tiedostoissa ja miten korjaus todennettiin. Katselmoinnin täysimittaista raporttia ei ole tässä
+repossa, koska repo on julkinen.
 
 Ks. myös [ARKKITEHTUURI.md](ARKKITEHTUURI.md) luku 5 (tietoturvaratkaisut kootusti) ja
 [JULKAISU.md](JULKAISU.md) (julkaisu ja Cloudflare-asetukset).
@@ -384,6 +386,7 @@ lukukelvottomasta compose-lohkosta ja listalta puuttuvasta muuttujasta.
 | Lokien koko | Dockerin oletusajuri kasvattaa json-lokia rajatta samalla levyllä, jolla kannan data on | `max-size: 10m`, `max-file: 3` api- ja web-konteille | `deploy/docker-compose.yml` |
 | Lokin eheys | kirjautumisvirheen lokirivi kirjoitti käyttäjän syöttämän sähköpostin sellaisenaan, joten siihen pystyi upottamaan rivinvaihdoilla omia lokirivejä | `%email` → `?email`, joka escapettaa ohjausmerkit | `backend/crates/api/src/routes/auth.rs` |
 | Sivutuksen ylivuoto | `(page - 1) * per_page` laskettiin `u32`:na: suuri `page` kiersi ympäri (release) tai panikoi 500:ksi (debug) | laskenta `i64`:nä | `backend/crates/api/src/routes/data/records.rs` |
+| Päivämäärävälin alivuoto | `RangeQuery::resolve` laski 30 päivän oletusalun `to - 29 päivää` tarkistamattomalla vähennyslaskulla, ja `unwrap_or` laski sen aina, myös kun `from` oli annettu. Kyselyparametri `to=-262143-01-01` (NaiveDaten alaraja) panikoi käsittelijän ilman kirjautumista: yhteys katkesi, nginx vastasi 502 ja pino jäi api:n lokiin. Koski reittejä `/api/sleep`, `/recharge`, `/activity`, `/cardio-load` ja `/summary/daily`; palvelin itse pysyi pystyssä | `checked_sub_signed`, joka palauttaa 400:n, ja oletusalku lasketaan vain kun `from` puuttuu. Regressiotestit: yksikkötesti `resolve`lle ja integraatiotesti kaikille viidelle reitille, molemmat todennettu kaatuvan vanhalla koodilla. Kelvolliset mutta äärimmäiset päivämäärät (ennen vuotta 4713 eaa., PostgreSQL:n alaraja) menevät yhä kantaan asti ja antavat 500:n eikä 400:aa; ne eivät kaada mitään. Löydetty jälkikatselmoinnissa 16.9.2026 | `backend/crates/api/src/routes/data/mod.rs`, `backend/crates/api/tests/data.rs` |
 | Varmuuskopiot | `pg_dump`-tiedostot syntyivät oletusoikeuksilla kotihakemistoon | `umask 077` ja `chmod 600`; etäkopio luvussa 9 | `deploy/backup.sh` |
 | Swagger UI:n validator | `/api/docs/` latasi merkkikuvan validator.swagger.io:sta ja vuoti API-kuvauksen osoitteen kolmannelle osapuolelle | `validator_url("none")` | `backend/crates/api/src/routes/mod.rs` |
 | 429:n viesti käyttäjälle | backend palauttaa englanninkielisen viestin API-kuluttajille, ja käyttöliittymä näyttäisi sen sellaisenaan suomenkielisellä sivulla | oma suomenkielinen teksti ja testi | `frontend/src/pages/LoginPage.tsx` |
@@ -453,6 +456,7 @@ Paikalliset kopiot ovat salaamattomia, joten ne toimivat varareittinä.
 | 11. Sivutuksen ylivuoto | **korjattu** (luku 8) |
 | 12. Swagger UI ja versiotieto julkisia | **tiedostettu valinta**; kolmannen osapuolen validator-kutsu poistettu |
 | 13. Varmuuskopiot salaamattomina kotihakemistossa | **korjattu**: oikeudet kunnossa (luku 8) ja salattu kopio koneen ulkopuolelle (luku 9) |
+| 14. Päivämäärävälin alivuoto panikoi pyynnön | **korjattu** (luku 8) regressiotesteineen; löydetty jälkikatselmoinnissa 16.9.2026 |
 
 ---
 
@@ -471,6 +475,7 @@ Palvelimella, kertaluonteisesti (ks. docs/JULKAISU.md luku 6b):
 3. Ota kannan sovellusrooli käyttöön: aseta `DB_APP_USER` ja `DB_APP_PASSWORD` ja aja
    `deploy/sql/app-role-handover.sql` kertaluonteisesti olemassa olevalle kannalle.
 
-Koodin puolelta ei jää avoimia kohtia: katselmoinnin kaikki 13 löydöstä on korjattu tai kirjattu
-tiedostetuksi valinnaksi (luku 10). Kohdat 2 ja 3 yllä ovat pelkkää käyttöönottoa — molemmat
-muutokset ovat valmiina repossa ja odottavat vain rivejä `deploy/.env`-tiedostossa.
+Koodin puolelta ei jää avoimia kohtia: kaikki 14 löydöstä (13 katselmoinnista 11.9.2026 ja yksi
+jälkikatselmoinnista 16.9.2026) on korjattu tai kirjattu tiedostetuksi valinnaksi (luku 10).
+Kohdat 2 ja 3 yllä ovat pelkkää käyttöönottoa — molemmat muutokset ovat valmiina repossa ja
+odottavat vain rivejä `deploy/.env`-tiedostossa.
