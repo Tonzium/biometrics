@@ -4,6 +4,7 @@
 use axum::{
     Json,
     extract::{Path, Query, State},
+    http::StatusCode,
 };
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::{MAX_RANGE_DAYS, Paged, RangeQuery, primary_account};
 use crate::{
-    auth::ReadAccess,
+    auth::{CurrentUser, ReadAccess},
+    db,
     error::{ApiError, ApiResult, ErrorBody},
     state::AppState,
 };
@@ -21,7 +23,7 @@ use crate::{
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(list_exercises))
-        .routes(routes!(get_exercise))
+        .routes(routes!(get_exercise, delete_exercise))
         .routes(routes!(list_sleep))
         .routes(routes!(list_recharge))
         .routes(routes!(list_activity))
@@ -178,6 +180,33 @@ async fn get_exercise(
     .await?
     .ok_or_else(|| ApiError::NotFound("exercise not found".into()))?;
     Ok(Json(exercise))
+}
+
+/// Omistaja: poistaa harjoituksen pysyvästi. Id kirjataan poistolistalle,
+/// jotta synkronointi ei tuo sitä takaisin Polarista (esim. vahingossa päälle
+/// jäänyt harjoitus, joka on poistettu myös Polar Flow'sta).
+#[utoipa::path(
+    delete, path = "/exercises/{id}", tag = "data",
+    params(("id" = String, Path, description = "Polarin harjoitus-id")),
+    responses(
+        (status = 204), (status = 401, body = ErrorBody), (status = 403, body = ErrorBody),
+        (status = 404, body = ErrorBody)
+    )
+)]
+async fn delete_exercise(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(id): Path<String>,
+) -> ApiResult<StatusCode> {
+    current.require_owner()?;
+    let Some(account) = db::polar_accounts::find_by_user(&state.pool, current.id).await? else {
+        return Err(ApiError::NotFound("exercise not found".into()));
+    };
+    if !db::polar_data::delete_exercise(&state.pool, account.id, &id).await? {
+        return Err(ApiError::NotFound("exercise not found".into()));
+    }
+    tracing::info!(exercise_id = %id, "exercise deleted by owner");
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ---------------------------------------------------------------------------

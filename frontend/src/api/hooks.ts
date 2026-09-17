@@ -123,6 +123,19 @@ export function useExercise(id: string | undefined) {
   })
 }
 
+/** Omistaja: poistaa harjoituksen ja kirjaa sen poistolistalle, jotta synkronointi ei tuo sitä takaisin. */
+export function useDeleteExercise() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/api/exercises/${encodeURIComponent(id)}`),
+    onSuccess: (_data, id) => {
+      qc.removeQueries({ queryKey: ['exercises', 'detail', id] })
+      void qc.invalidateQueries({ queryKey: ['exercises'] })
+      void qc.invalidateQueries({ queryKey: ['summary'] })
+    },
+  })
+}
+
 export function useSleep(range: DateRange) {
   return useQuery({
     queryKey: ['sleep', range],

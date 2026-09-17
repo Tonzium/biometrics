@@ -1,6 +1,6 @@
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 
-import { useExercise } from '../api/hooks'
+import { useDeleteExercise, useExercise, useMe } from '../api/hooks'
 import { HrZonesChart } from '../components/charts'
 import { StatCard } from '../components/StatCard'
 import { ErrorBox, Loading } from '../components/Status'
@@ -8,7 +8,11 @@ import { formatDateTime, formatDistance, formatDuration, formatLocalDateTime, fo
 
 export function ExerciseDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const exercise = useExercise(id)
+  const me = useMe()
+  const remove = useDeleteExercise()
+  const isOwner = me.data?.role === 'owner'
 
   if (exercise.isPending) return <Loading />
   if (exercise.isError) return <ErrorBox error={exercise.error} title="Harjoitusta ei löytynyt" />
@@ -34,7 +38,26 @@ export function ExerciseDetailPage() {
           {e.device ? ` · ${e.device}` : ''}
           {e.upload_time ? ` · siirretty ${formatDateTime(e.upload_time)}` : ''}
         </p>
+        {isOwner ? (
+          <button
+            type="button"
+            className="btn btn-ghost btn-danger"
+            disabled={remove.isPending}
+            onClick={() => {
+              if (
+                window.confirm(
+                  'Poistetaanko harjoitus pysyvästi? Poisto koskee vain tätä sovellusta, ja synkronointi ei tuo harjoitusta takaisin.',
+                )
+              ) {
+                remove.mutate(e.id, { onSuccess: () => void navigate('/exercises', { replace: true }) })
+              }
+            }}
+          >
+            {remove.isPending ? 'Poistetaan…' : 'Poista harjoitus'}
+          </button>
+        ) : null}
       </div>
+      {remove.isError ? <ErrorBox error={remove.error} title="Poisto epäonnistui" /> : null}
 
       <div className="stat-grid">
         <StatCard label="Kesto" value={formatDuration(e.duration_s)} accent="red" />

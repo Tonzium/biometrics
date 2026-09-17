@@ -203,6 +203,97 @@ async fn exercise_detail_and_404(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "api::MIGRATOR")]
+async fn owner_deletes_exercise_and_sync_does_not_restore_it(pool: PgPool) {
+    let account = seed(&pool).await;
+    let app = common::test_app(pool.clone());
+    let session = login(&app).await;
+
+    let del = common::delete_with_cookie(&app, "/api/exercises/EX1", &session).await;
+    assert_eq!(del.status(), StatusCode::NO_CONTENT);
+    assert_eq!(
+        common::get(&app, "/api/exercises/EX1").await.status(),
+        StatusCode::NOT_FOUND
+    );
+    let list = common::body_json(common::get(&app, "/api/exercises").await).await;
+    assert_eq!(list["total"], 2);
+    let overview = common::body_json(common::get(&app, "/api/summary/overview").await).await;
+    assert_eq!(overview["exercises"], 2);
+    assert_eq!(overview["sports"], serde_json::json!(["RUNNING"]));
+
+    // Toinen poisto samalle id:lle on 404.
+    let again = common::delete_with_cookie(&app, "/api/exercises/EX1", &session).await;
+    assert_eq!(again.status(), StatusCode::NOT_FOUND);
+
+    // Polar palauttaa saman harjoituksen seuraavassa synkronoinnissa: upsert ohittaa sen.
+    let ex: Fetched<Exercise> = fetched(serde_json::json!({
+        "id": "EX1", "start_time": format!("{}T08:00:00", day(3)),
+        "start_time_utc_offset": 180, "duration": "PT2H", "sport": "CYCLING"
+    }));
+    api::db::polar_data::upsert_exercise(&pool, account, &ex)
+        .await
+        .unwrap();
+    assert_eq!(
+        common::get(&app, "/api/exercises/EX1").await.status(),
+        StatusCode::NOT_FOUND
+    );
+    // Muut harjoitukset upsertoituvat edelleen normaalisti.
+    let ex: Fetched<Exercise> = fetched(serde_json::json!({
+        "id": "EX9", "start_time": format!("{}T08:00:00", day(1)),
+        "start_time_utc_offset": 180, "duration": "PT1H", "sport": "WALKING"
+    }));
+    api::db::polar_data::upsert_exercise(&pool, account, &ex)
+        .await
+        .unwrap();
+    assert_eq!(
+        common::get(&app, "/api/exercises/EX9").await.status(),
+        StatusCode::OK
+    );
+}
+
+#[sqlx::test(migrator = "api::MIGRATOR")]
+async fn delete_exercise_requires_owner(pool: PgPool) {
+    seed(&pool).await;
+    let hash = api::auth::password::hash("viewer-password-123".into())
+        .await
+        .unwrap();
+    api::db::users::insert(&pool, "viewer@example.com", &hash, Role::Viewer)
+        .await
+        .unwrap();
+    let app = common::test_app(pool);
+
+    // Anonyymi: 401.
+    let anon = common::send(
+        &app,
+        axum::http::Request::delete("/api/exercises/EX0")
+            .body(axum::body::Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(anon.status(), StatusCode::UNAUTHORIZED);
+
+    // Katselija: 403.
+    let body =
+        serde_json::json!({ "email": "viewer@example.com", "password": "viewer-password-123" })
+            .to_string();
+    let response = common::post_json(&app, "/api/auth/login", &body).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let viewer = common::session_cookie(&response);
+    let forbidden = common::delete_with_cookie(&app, "/api/exercises/EX0", &viewer).await;
+    assert_eq!(forbidden.status(), StatusCode::FORBIDDEN);
+
+    // Harjoitus on yhä paikallaan.
+    assert_eq!(
+        common::get(&app, "/api/exercises/EX0").await.status(),
+        StatusCode::OK
+    );
+
+    // Omistaja: tuntematon id on 404.
+    let owner = login(&app).await;
+    let missing = common::delete_with_cookie(&app, "/api/exercises/NOPE", &owner).await;
+    assert_eq!(missing.status(), StatusCode::NOT_FOUND);
+}
+
+#[sqlx::test(migrator = "api::MIGRATOR")]
 async fn ranged_lists_default_to_30_days_and_validate(pool: PgPool) {
     seed(&pool).await;
     let app = common::test_app(pool);

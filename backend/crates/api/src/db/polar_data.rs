@@ -42,10 +42,14 @@ pub async fn upsert_exercise(
             duration_s, sport, detailed_sport_info, device, device_id, distance_m, calories,
             hr_avg, hr_max, training_load, has_route, running_index, fat_percentage,
             carbohydrate_percentage, protein_percentage, heart_rate_zones, training_load_pro, raw
-        ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-            $20, $21, $22, $23, $24
         )
+        SELECT
+            $1::text, $2::uuid, $3::timestamptz, $4::timestamp, $5::integer, $6::timestamptz,
+            $7::integer, $8::text, $9::text, $10::text, $11::text, $12::real, $13::integer,
+            $14::smallint, $15::smallint, $16::real, $17::boolean, $18::smallint, $19::smallint,
+            $20::smallint, $21::smallint, $22::jsonb, $23::jsonb, $24::jsonb
+            -- Omistajan poistamaa harjoitusta ei tuoda takaisin (ks. migraatio 0007).
+        WHERE NOT EXISTS (SELECT 1 FROM deleted_exercises d WHERE d.id = $1)
         ON CONFLICT (id) DO UPDATE SET
             polar_account_id = EXCLUDED.polar_account_id,
             start_time = EXCLUDED.start_time, start_time_local = EXCLUDED.start_time_local,
@@ -91,6 +95,35 @@ pub async fn upsert_exercise(
     .await
     .context("upsert exercise")?;
     Ok(())
+}
+
+/// Omistajan poisto: kirjaa harjoituksen poistolistalle ja poistaa rivin
+/// samassa transaktiossa, jotta seuraava synkronointi ei tuo sitä takaisin.
+/// Palauttaa `false`, jos harjoitusta ei ollut tällä tilillä.
+pub async fn delete_exercise(pool: &PgPool, account_id: Uuid, id: &str) -> sqlx::Result<bool> {
+    let mut tx = pool.begin().await?;
+    let deleted = sqlx::query!(
+        "DELETE FROM exercises WHERE polar_account_id = $1 AND id = $2",
+        account_id,
+        id
+    )
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    if deleted == 0 {
+        tx.rollback().await?;
+        return Ok(false);
+    }
+    sqlx::query!(
+        "INSERT INTO deleted_exercises (id, polar_account_id) VALUES ($1, $2)
+         ON CONFLICT (id) DO UPDATE SET deleted_at = now()",
+        id,
+        account_id
+    )
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(true)
 }
 
 pub async fn upsert_sleep(

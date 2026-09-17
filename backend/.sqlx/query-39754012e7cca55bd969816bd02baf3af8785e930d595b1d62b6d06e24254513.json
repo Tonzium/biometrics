@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO exercises (\n            id, polar_account_id, start_time, start_time_local, utc_offset_min, upload_time,\n            duration_s, sport, detailed_sport_info, device, device_id, distance_m, calories,\n            hr_avg, hr_max, training_load, has_route, running_index, fat_percentage,\n            carbohydrate_percentage, protein_percentage, heart_rate_zones, training_load_pro, raw\n        )\n        SELECT\n            $1::text, $2::uuid, $3::timestamptz, $4::timestamp, $5::integer, $6::timestamptz,\n            $7::integer, $8::text, $9::text, $10::text, $11::text, $12::real, $13::integer,\n            $14::smallint, $15::smallint, $16::real, $17::boolean, $18::smallint, $19::smallint,\n            $20::smallint, $21::smallint, $22::jsonb, $23::jsonb, $24::jsonb\n            -- Omistajan poistamaa harjoitusta ei tuoda takaisin (ks. migraatio 0007).\n        WHERE NOT EXISTS (SELECT 1 FROM deleted_exercises d WHERE d.id = $1)\n        ON CONFLICT (id) DO UPDATE SET\n            polar_account_id = EXCLUDED.polar_account_id,\n            start_time = EXCLUDED.start_time, start_time_local = EXCLUDED.start_time_local,\n            utc_offset_min = EXCLUDED.utc_offset_min, upload_time = EXCLUDED.upload_time,\n            duration_s = EXCLUDED.duration_s, sport = EXCLUDED.sport,\n            detailed_sport_info = EXCLUDED.detailed_sport_info, device = EXCLUDED.device,\n            device_id = EXCLUDED.device_id, distance_m = EXCLUDED.distance_m,\n            calories = EXCLUDED.calories, hr_avg = EXCLUDED.hr_avg, hr_max = EXCLUDED.hr_max,\n            training_load = EXCLUDED.training_load, has_route = EXCLUDED.has_route,\n            running_index = EXCLUDED.running_index, fat_percentage = EXCLUDED.fat_percentage,\n            carbohydrate_percentage = EXCLUDED.carbohydrate_percentage,\n            protein_percentage = EXCLUDED.protein_percentage,\n            heart_rate_zones = EXCLUDED.heart_rate_zones,\n            training_load_pro = EXCLUDED.training_load_pro,\n            raw = EXCLUDED.raw, synced_at = now()\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Timestamptz",
+        "Timestamp",
+        "Int4",
+        "Timestamptz",
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Float4",
+        "Int4",
+        "Int2",
+        "Int2",
+        "Float4",
+        "Bool",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Jsonb",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "39754012e7cca55bd969816bd02baf3af8785e930d595b1d62b6d06e24254513"
+}

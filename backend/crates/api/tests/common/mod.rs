@@ -60,6 +60,17 @@ pub async fn get_with_cookie(app: &Router, uri: &str, cookie: &str) -> Response<
     .await
 }
 
+pub async fn delete_with_cookie(app: &Router, uri: &str, cookie: &str) -> Response<Body> {
+    send(
+        app,
+        Request::delete(uri)
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await
+}
+
 pub async fn post_json(app: &Router, uri: &str, json: &str) -> Response<Body> {
     let request = Request::post(uri)
         .header(header::CONTENT_TYPE, "application/json")
