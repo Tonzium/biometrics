@@ -152,6 +152,7 @@ Kaikki reitit `/api`-etuliitteellä. **Lukureitit ovat julkisia** (näyteikkuna;
 | GET | `/api/meta` | Julkinen: `public_read`, `polar_configured`, versio (frontend päättää tästä, näyttääkö kirjautumisen ensin) |
 | GET | `/api/exercises?from&to&sport&page&per_page` | Julkinen: sivutettu lista uusin ensin, `{items, page, per_page, total}` |
 | GET | `/api/exercises/{id}` | Julkinen: yksittäinen harjoitus sykevyöhykkeineen |
+| DELETE | `/api/exercises/{id}` | Omistaja: poistaa harjoituksen ja kirjaa id:n `deleted_exercises`-poistolistalle, jotta synkronointi ei tuo sitä takaisin Polarista. 204 / 401 / 403 / 404 |
 | GET | `/api/sleep?from&to` | Julkinen: yöt (oletus 30 pv, max 366) hypnogrammeineen |
 | GET | `/api/recharge?from&to` | Julkinen: Nightly Recharge |
 | GET | `/api/activity?from&to` | Julkinen: päiväaktiivisuus |
