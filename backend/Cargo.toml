@@ -49,7 +49,7 @@ aes-gcm = { version = "0.11", features = ["getrandom"] }
 url = "2"
 wiremock = "0.6"
 base64 = "0.22"
-rand = "0.9"
+rand = "0.10"
 
 # OpenAPI
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
