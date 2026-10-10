@@ -2,7 +2,7 @@
 # SQLX_OFFLINE=true: kyselyt tarkistetaan .sqlx-kansion metadatasta, ei kantaa vasten.
 # rust-toolchain.toml jätetään tarkoituksella kopioimatta, jotta imagen oma
 # toolchain kelpaa eikä rustup lataa toista versiota buildin aikana.
-FROM rust:1.98-bookworm AS builder
+FROM rust:1.99-bookworm AS builder
 WORKDIR /app
 
 COPY Cargo.toml Cargo.lock ./
